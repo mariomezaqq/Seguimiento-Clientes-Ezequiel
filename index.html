@@ -683,45 +683,47 @@ async function cargarContactosDelSheet() {
   try {
     updateSyncStatus(false);
     
-    if (!config.sheetId) {
-      alert('❌ Configura el ID del Google Sheet primero en ⚙️ Configuración');
+    if (!config.scriptUrl) {
+      showToast('❌ Configura la URL del Apps Script en Configuración');
       return;
     }
     
-    // Método 1: Intentar API de Google Sheets directamente
-    const apiKey = 'AIzaSyAm4lQGz5k_tVzKBLQvgWOlUyWm6I7TyF4';
-    const ranges = ['Contactos!A:H', 'Reuniones!A:G', 'Inversiones!A:E'];
-    const sheetsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${apiKey}&ranges=${ranges.join(',')}&includeGridData=true`;
+    console.log('Conectando a:', config.scriptUrl);
     
-    console.log('Conectando a:', config.sheetId);
+    // Llamar al Google Apps Script
+    const response = await fetch(config.scriptUrl, {
+      method: 'GET',
+      mode: 'cors'
+    });
     
-    try {
-      const response = await fetch(sheetsUrl);
-      
-      if (response.ok) {
-        const result = await response.json();
-        procesarDatosSheet(result);
-        updateSyncStatus(true);
-        showToast('✓ Sincronizado');
-        return;
-      }
-    } catch (e) {
-      console.log('API método falló, intentando CSV...');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
     
-    // Método 2: Si falla API, usar CSV export (funciona mejor en GitHub Pages)
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${config.sheetId}/export?format=csv&gid=0`;
-    const csvResponse = await fetch(csvUrl, { mode: 'no-cors' });
-    const csv = await csvResponse.text();
+    const result = await response.json();
     
-    procesarCSVDirecto(csv);
+    if (!result.success) {
+      throw new Error(result.error || 'Error desconocido');
+    }
+    
+    // Cargar datos
+    data.contactos = result.contactos || [];
+    data.reuniones = result.reuniones || [];
+    data.inversiones = result.inversiones || [];
+    
+    console.log('✅ Contactos cargados:', data.contactos.length);
+    console.log('✅ Reuniones cargadas:', data.reuniones.length);
+    console.log('✅ Inversiones cargadas:', data.inversiones.length);
+    
+    renderizar();
+    guardarEnLocalStorage();
     updateSyncStatus(true);
-    showToast('✓ Sincronizado (CSV)');
+    showToast('✓ Sincronizado - ' + data.contactos.length + ' contactos');
     
   } catch (error) {
     console.error('Error de sincronización:', error);
     updateSyncStatus(false);
-    showToast('❌ Error: Verifica que el Sheet esté compartido');
+    showToast('❌ Error: ' + error.message);
   }
 }
 
