@@ -2,424 +2,652 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Albion — Dashboard Comercial</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Albion — Dashboard Comercial Sincronizado</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
+/* ===== RESET & TOKENS ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
   --negro:#211915;
   --dorado:#b09366;
+  --dorado-lt:#c9aa82;
+  --dorado-dk:#8a7150;
   --gris:#87868a;
+  --gris2:#5b5b5f;
+  --gris3:#aeadb3;
+  --gris6:#d8d9dd;
   --fondo:#f4f3f1;
   --blanco:#ffffff;
-  --verde:#27ae60;
   --alarma:#c0392b;
+  --alarma-lt:#fdf3f2;
+  --verde:#27ae60;
+  --verde-lt:#eafaf1;
+  --amarillo:#e67e22;
+  --amarillo-lt:#fef5ec;
+  --azul:#1a6fa0;
+  --azul-lt:#e8f4fd;
   --sidebar-w:240px;
   --topbar-h:56px;
+  --bottomnav-h:64px;
+  --safe-bottom:env(safe-area-inset-bottom, 0px);
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 2px 12px rgba(33,25,21,0.08);
+  --shadow-lg:0 8px 32px rgba(33,25,21,0.14);
+  --font-display:'Cormorant Garamond',Georgia,serif;
+  --font-body:'DM Sans',system-ui,sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0}
+html{height:100%;overflow-x:hidden}
 body{
-  font-family:'DM Sans',sans-serif;
+  font-family:var(--font-body);
   background:var(--fondo);
   color:var(--negro);
+  min-height:100%;
+  overflow-x:hidden;
 }
+
+/* ===== LAYOUT ===== */
 .app-shell{display:flex;min-height:100vh}
+
+/* Sidebar — desktop only */
 .sidebar{
   position:fixed;top:0;left:0;
   width:var(--sidebar-w);height:100vh;
   background:var(--negro);
-  color:#fff;
-  padding:20px;
-  overflow-y:auto;
+  display:flex;flex-direction:column;
   z-index:200;
+  transition:transform 0.3s cubic-bezier(.4,0,.2,1);
 }
 .sidebar-logo{
-  text-align:center;
-  margin-bottom:30px;
-  padding-bottom:20px;
+  padding:24px 20px 18px;
   border-bottom:1px solid rgba(176,147,102,0.2);
+  display:flex;flex-direction:column;align-items:center;
 }
-.sidebar-logo img{
-  width:120px;
-  height:auto;
-}
-.sidebar-logo h2{
-  color:var(--dorado);
-  font-family:'Cormorant Garamond',serif;
-  font-size:20px;
-  margin-top:10px;
-}
+.sidebar-logo svg{width:100%;max-width:150px;height:auto}
+.sidebar-logo-text{font-family:var(--font-display);font-size:18px;color:var(--dorado);letter-spacing:2px;font-weight:700;margin-top:10px}
+.sidebar-logo-sub{font-size:8px;color:var(--gris3);letter-spacing:1px;text-align:center;margin-top:4px}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
 .nav-item{
-  padding:12px 15px;
-  margin:8px 0;
-  cursor:pointer;
-  border-radius:6px;
-  color:rgba(255,255,255,0.7);
-  transition:all 0.2s;
+  display:flex;align-items:center;gap:12px;
+  padding:13px 20px;cursor:pointer;
+  color:var(--gris3);font-size:13px;font-weight:500;
+  border-left:3px solid transparent;
+  transition:all 0.18s;user-select:none;
 }
-.nav-item:hover{
-  background:rgba(176,147,102,0.2);
-  color:var(--dorado);
+.nav-item:hover{color:var(--dorado);background:rgba(176,147,102,0.07)}
+.nav-item.active{color:var(--dorado);background:rgba(176,147,102,0.1);border-left-color:var(--dorado)}
+.nav-item svg{width:17px;height:17px;flex-shrink:0}
+.nav-badge{
+  margin-left:auto;background:var(--alarma);color:#fff;
+  font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;
 }
-.nav-item.active{
-  background:var(--dorado);
-  color:var(--negro);
-  font-weight:600;
-}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(176,147,102,0.15)}
+.sidebar-footer p{color:var(--gris2);font-size:10px;text-align:center;line-height:1.6}
+
+/* Main area */
 .main{
   margin-left:var(--sidebar-w);
-  width:calc(100% - var(--sidebar-w));
   min-height:100vh;
+  display:flex;flex-direction:column;
+  width:calc(100% - var(--sidebar-w));
 }
+
+/* Topbar */
 .topbar{
+  position:sticky;top:0;z-index:100;
   background:var(--blanco);
-  padding:16px 32px;
-  border-bottom:1px solid #e0e0e0;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+  border-bottom:1px solid var(--gris6);
+  height:var(--topbar-h);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;
+  gap:12px;
 }
-.topbar h1{
-  font-family:'Cormorant Garamond',serif;
-  font-size:28px;
-  color:var(--negro);
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar h1{font-family:var(--font-display);font-size:20px;font-weight:600;letter-spacing:0.3px}
+.topbar-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.hamburger{
+  display:none;background:none;border:none;cursor:pointer;
+  padding:6px;border-radius:8px;color:var(--negro);
 }
-.content{
-  padding:32px;
+
+.sync-indicator{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--gris);
+  padding:6px 12px;
+  background:var(--fondo);
+  border-radius:6px;
 }
-.page{display:none}
+.sync-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--alarma);animation:pulse 1.5s infinite;
+}
+.sync-dot.connected{background:var(--verde)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* Pages */
+.page{display:none;flex:1;padding:24px}
 .page.active{display:block}
-.section-hd{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:24px;
-}
-.section-title{
-  font-family:'Cormorant Garamond',serif;
-  font-size:24px;
-  color:var(--negro);
-}
+
+/* ===== BUTTONS ===== */
 .btn{
-  padding:10px 20px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-  font-weight:600;
-  transition:all 0.2s;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:var(--radius-sm);
+  font-family:var(--font-body);font-size:12px;font-weight:600;
+  letter-spacing:0.5px;cursor:pointer;border:1.5px solid transparent;
+  transition:all 0.18s;white-space:nowrap;user-select:none;
 }
-.btn-primary{
-  background:var(--dorado);
-  color:var(--negro);
+.btn-primary{background:var(--negro);color:var(--dorado);border-color:var(--negro)}
+.btn-primary:hover{background:var(--gris2)}
+.btn-gold{background:var(--dorado);color:var(--negro);border-color:var(--dorado)}
+.btn-gold:hover{background:var(--dorado-dk);color:#fff}
+.btn-secondary{background:transparent;color:var(--negro);border-color:var(--gris6)}
+.btn-secondary:hover{background:var(--fondo)}
+.btn-sm{padding:6px 13px;font-size:11px}
+.btn-icon{padding:8px;border-radius:var(--radius-sm);border:1.5px solid var(--gris6);background:var(--blanco);cursor:pointer;color:var(--gris2);display:inline-flex;align-items:center;justify-content:center}
+.btn-icon:hover{border-color:var(--dorado);color:var(--dorado)}
+
+/* ===== KPI GRID ===== */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:14px;margin-bottom:24px;
 }
-.btn-primary:hover{
-  background:#c9aa82;
+.kpi-card{
+  background:var(--blanco);border-radius:var(--radius);
+  padding:18px 16px;position:relative;overflow:hidden;
+  box-shadow:var(--shadow);
+  border:1px solid var(--gris6);
 }
-.btn-secondary{
-  background:transparent;
-  border:2px solid var(--dorado);
-  color:var(--dorado);
+.kpi-card::after{
+  content:'';position:absolute;top:0;left:0;
+  width:3px;height:100%;background:var(--dorado);border-radius:2px 0 0 2px;
 }
-.btn-secondary:hover{
-  background:rgba(176,147,102,0.1);
+.kpi-card.alarm::after{background:var(--alarma)}
+.kpi-label{font-size:10px;color:var(--gris);letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.kpi-value{font-family:var(--font-display);font-size:38px;color:var(--negro);margin-top:2px;line-height:1}
+.kpi-value.red{color:var(--alarma)}
+.kpi-sub{font-size:10px;color:var(--gris3);margin-top:4px}
+
+/* ===== SECTION HEADER ===== */
+.section-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;gap:12px;flex-wrap:wrap;
 }
+.section-title{font-family:var(--font-display);font-size:18px;font-weight:600}
+
+/* ===== TABLES ===== */
 .table-wrap{
-  background:var(--blanco);
-  border-radius:8px;
-  padding:20px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  background:var(--blanco);border-radius:var(--radius);
+  box-shadow:var(--shadow);border:1px solid var(--gris6);
+  overflow:hidden;margin-bottom:24px;
 }
-table{
-  width:100%;
-  border-collapse:collapse;
-}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:var(--fondo);border-bottom:1px solid var(--gris6)}
 th{
-  background:#f9f9f9;
-  padding:12px;
-  text-align:left;
-  font-weight:600;
-  color:var(--gris);
-  border-bottom:2px solid #e0e0e0;
+  padding:12px 16px;text-align:left;
+  font-weight:600;color:var(--gris2);letter-spacing:0.3px;
+  font-size:11px;text-transform:uppercase;
 }
-td{
-  padding:12px;
-  border-bottom:1px solid #e0e0e0;
+td{padding:12px 16px;border-bottom:1px solid var(--gris6)}
+tbody tr:hover{background:rgba(176,147,102,0.03)}
+tbody tr:last-child td{border-bottom:none}
+
+/* ===== MODAL ===== */
+.modal-overlay{
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(33,25,21,0.6);z-index:500;align-items:center;justify-content:center;
 }
+.modal-overlay.open{display:flex}
 .modal{
-  display:none;
-  position:fixed;
-  top:0;left:0;
-  right:0;bottom:0;
-  background:rgba(0,0,0,0.5);
-  z-index:300;
-  align-items:center;
-  justify-content:center;
+  background:var(--blanco);border-radius:var(--radius);
+  padding:28px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);
 }
-.modal.active{display:flex}
-.modal-content{
-  background:var(--blanco);
-  padding:32px;
-  border-radius:12px;
-  max-width:500px;
-  width:90%;
+.modal-header{
+  font-family:var(--font-display);font-size:20px;font-weight:600;
+  margin-bottom:20px;color:var(--negro);
 }
-.modal-title{
-  font-size:20px;
-  font-weight:600;
-  margin-bottom:20px;
-}
-.form-group{
-  margin-bottom:16px;
-}
-.form-group label{
-  display:block;
+.form-group{margin-bottom:16px}
+label{
+  display:block;font-size:11px;font-weight:600;
+  color:var(--gris2);letter-spacing:0.5px;text-transform:uppercase;
   margin-bottom:6px;
-  font-weight:500;
-  color:var(--negro);
 }
-.form-group input,.form-group select,.form-group textarea{
-  width:100%;
-  padding:10px;
-  border:1px solid #ddd;
-  border-radius:6px;
-  font-family:inherit;
+input,select,textarea{
+  width:100%;padding:10px 12px;
+  border:1px solid var(--gris6);border-radius:var(--radius-sm);
+  font-family:var(--font-body);font-size:12px;
+  color:var(--negro);background:var(--blanco);
+  transition:border-color 0.18s;
 }
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:var(--dorado);
+  box-shadow:0 0 0 2px rgba(176,147,102,0.1);
+}
+textarea{min-height:100px;resize:vertical}
+.form-actions{
+  display:flex;gap:10px;margin-top:24px;justify-content:flex-end;
+}
+
+/* ===== TOAST ===== */
 .toast{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  background:var(--verde);
-  color:#fff;
-  padding:16px 24px;
-  border-radius:6px;
-  z-index:400;
-  animation:slideIn 0.3s ease-out;
+  position:fixed;bottom:20px;right:20px;z-index:1000;
+  background:var(--verde);color:#fff;
+  padding:12px 16px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:600;
+  box-shadow:var(--shadow-lg);
+  animation:slideUp 0.3s ease-out;
 }
-@keyframes slideIn{
-  from{transform:translateX(400px);opacity:0}
-  to{transform:translateX(0);opacity:1}
+.toast.error{background:var(--alarma)}
+@keyframes slideUp{from{transform:translateY(100px)}to{transform:translateY(0)}}
+
+/* ===== BADGE ===== */
+.badge{
+  display:inline-block;padding:3px 10px;border-radius:12px;
+  font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
 }
-.filtro-btn{
-  margin-right:10px;
-  margin-bottom:10px;
-  padding:8px 16px;
-  background:#f0f0f0;
-  border:none;
-  border-radius:20px;
-  cursor:pointer;
-  font-weight:500;
-  transition:all 0.2s;
-}
-.filtro-btn.active{
-  background:var(--dorado);
-  color:#fff;
-}
+.badge-green{background:var(--verde-lt);color:var(--verde)}
+.badge-red{background:var(--alarma-lt);color:var(--alarma)}
+.badge-orange{background:var(--amarillo-lt);color:var(--amarillo)}
+.badge-blue{background:var(--azul-lt);color:var(--azul)}
 </style>
 </head>
 <body>
 <div class="app-shell">
   <!-- SIDEBAR -->
-  <div class="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-logo">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='95' fill='none' stroke='%23b09366' stroke-width='2'/%3E%3Cpath d='M100 30 L170 170 L30 170 Z' fill='none' stroke='%23b09366' stroke-width='2.5'/%3E%3Ctext x='100' y='125' font-family='serif' font-size='48' fill='%23b09366' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E" alt="Logo">
-      <h2>ALBION</h2>
-      <p style="font-size:10px;color:#b09366;margin-top:4px">GLOBAL PARTNERS</p>
+      <!-- Logo Real Albion -->
+      <img src="data:image/jpeg;base64,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" alt="Albion Logo" style="width: 100%; max-width: 160px; height: auto;">
     </div>
-    
-    <nav>
-      <div class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</div>
-      <div class="nav-item" onclick="showPage('contactos')">👥 Contactos</div>
-      <div class="nav-item" onclick="showPage('reuniones')">📅 Reuniones</div>
-      <div class="nav-item" onclick="showPage('inversiones')">💰 Inversiones</div>
-      <div class="nav-item" onclick="showPage('fondos')">🏦 Fondos</div>
-      <div class="nav-item" onclick="showPage('config')">⚙️ Configuración</div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-page="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+      </div>
+      <div class="nav-item" data-page="contactos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Contactos</span>
+      </div>
+      <div class="nav-item" data-page="reuniones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Reuniones</span>
+      </div>
+      <div class="nav-item" data-page="inversiones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>Inversiones</span>
+      </div>
+      <div class="nav-item" data-page="fondos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
+        <span>Fondos</span>
+      </div>
+      <div class="nav-item" data-page="config">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6m-4.22-7.78l4.24-4.24m-5.08 10.16l4.24 4.24"/></svg>
+        <span>Configuración</span>
+      </div>
     </nav>
-  </div>
+    <div class="sidebar-footer">
+      <p>Dashboard Comercial<br>Sincronizado con Google Sheets</p>
+    </div>
+  </aside>
 
   <!-- MAIN CONTENT -->
-  <div class="main">
+  <main class="main">
+    <!-- TOPBAR -->
     <div class="topbar">
-      <h1>Dashboard Comercial</h1>
-      <div>
-        <span id="syncStatus" style="color:#666;margin-right:20px;">⏳ Sincronizando...</span>
-        <button class="btn btn-primary" onclick="sincronizar()">Sincronizar</button>
+      <div class="topbar-left">
+        <h1>Dashboard Comercial</h1>
+      </div>
+      <div class="topbar-actions">
+        <div class="sync-indicator">
+          <div class="sync-dot" id="syncDot"></div>
+          <span id="syncText">Conectando...</span>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="syncWithSheets()" id="btnSync">Sincronizar</button>
       </div>
     </div>
 
-    <div class="content">
-      <!-- DASHBOARD PAGE -->
-      <div class="page active" id="page-dashboard">
-        <div class="section-hd">
-          <h2 class="section-title">Dashboard</h2>
+    <!-- PAGE: DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Contactos</div>
+          <div class="kpi-value" id="kpiContactos">0</div>
         </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Próximas Reuniones</div>
+          <div class="kpi-value" id="kpiReuniones">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Calientes</div>
+          <div class="kpi-value" id="kpiCalientes">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Inversiones</div>
+          <div class="kpi-value" id="kpiInversiones">0</div>
+        </div>
+      </div>
+
+      <div class="section-hd">
+        <h2 class="section-title">Contactos Recientes</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-contacto')">+ Nuevo Contacto</button>
+      </div>
+      <div class="table-wrap">
+        <table id="tablaContactos">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Empresa</th>
+              <th>Email</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyContactos"></tbody>
+        </table>
+      </div>
+
+      <div class="section-hd">
+        <h2 class="section-title">Próximas Reuniones</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-reunion')">+ Agendar</button>
+      </div>
+      <div class="table-wrap">
+        <table id="tablaReuniones">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Contacto</th>
+              <th>Producto</th>
+              <th>Próximo Paso</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyReuniones"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: CONTACTOS -->
+    <div class="page" id="page-contactos">
+      <div class="section-hd">
+        <h2 class="section-title">Contactos</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-contacto')">+ Nuevo Contacto</button>
+      </div>
+      
+      <!-- FILTROS POR CATEGORÍA -->
+      <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-gold btn-sm" onclick="filtrarPorTipo('Todos')" id="filtro-todos">📊 Todos (337)</button>
+        <button class="btn btn-secondary btn-sm" onclick="filtrarPorTipo('MFO')" id="filtro-mfo">🏦 MFO (240)</button>
+        <button class="btn btn-secondary btn-sm" onclick="filtrarPorTipo('Broker')" id="filtro-broker">📈 Brokers (67)</button>
+        <button class="btn btn-secondary btn-sm" onclick="filtrarPorTipo('Banca Privada')" id="filtro-banco">🏛️ Banca Privada (8)</button>
+        <button class="btn btn-secondary btn-sm" onclick="filtrarPorTipo('AFP')" id="filtro-afp">💼 AFP (22)</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Empresa</th>
+              <th>Cargo</th>
+              <th>Email</th>
+              <th>Tipo</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyContactosAll"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: REUNIONES -->
+    <div class="page" id="page-reuniones">
+      <div class="section-hd">
+        <h2 class="section-title">Reuniones</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-reunion')">+ Agendar</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Contacto</th>
+              <th>Empresa</th>
+              <th>Producto</th>
+              <th>Próximo Paso</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyReunionesAll"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: INVERSIONES -->
+    <div class="page" id="page-inversiones">
+      <div class="section-hd">
+        <h2 class="section-title">Inversiones</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-inversion')">+ Registrar</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Contacto</th>
+              <th>Empresa</th>
+              <th>Fondo</th>
+              <th>Monto</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyInversiones"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: FONDOS -->
+    <div class="page" id="page-fondos">
+      <div class="section-hd">
+        <h2 class="section-title">Fondos de Inversión</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-inversion')">+ Inversión</button>
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px">
+        <!-- FONDO 1: Albion Portfolio One -->
         <div class="table-wrap">
-          <h3>Métricas Principales</h3>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:20px">
-            <div style="padding:20px;background:#f9f9f9;border-radius:8px">
-              <div style="font-size:12px;color:#999">Total Contactos</div>
-              <div style="font-size:28px;font-weight:bold;color:var(--dorado)" id="totalContactos">0</div>
+          <div style="background:#211915; color:#b09366; padding:12px; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:16px; font-weight:600;">Albion Portfolio One</h3>
+            <span style="font-size:13px; color:#87868a;" id="apo-count">0 clientes</span>
+          </div>
+          <div style="background:#f4f3f1; padding:16px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #d8d9dd;">
+              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">CLIENTE</div>
+              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">EMPRESA</div>
+              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">AUM</div>
             </div>
-            <div style="padding:20px;background:#f9f9f9;border-radius:8px">
-              <div style="font-size:12px;color:#999">MFO</div>
-              <div style="font-size:28px;font-weight:bold;color:#333" id="totalMFO">0</div>
-            </div>
-            <div style="padding:20px;background:#f9f9f9;border-radius:8px">
-              <div style="font-size:12px;color:#999">Brokers</div>
-              <div style="font-size:28px;font-weight:bold;color:#333" id="totalBrokers">0</div>
-            </div>
-            <div style="padding:20px;background:#f9f9f9;border-radius:8px">
-              <div style="font-size:12px;color:#999">AFP</div>
-              <div style="font-size:28px;font-weight:bold;color:#333" id="totalAFP">0</div>
+            <div id="fondo-apo-list" style="min-height:100px;">
+              <div style="text-align:center; color:#87868a; padding:20px;">Sin clientes</div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- CONTACTOS PAGE -->
-      <div class="page" id="page-contactos">
-        <div class="section-hd">
-          <h2 class="section-title">Contactos</h2>
-          <button class="btn btn-primary" onclick="openModal('modal-contacto')">+ Nuevo</button>
-        </div>
-        <div style="margin-bottom:20px">
-          <button class="filtro-btn active" onclick="filtrarContactos('Todos')">Todos</button>
-          <button class="filtro-btn" onclick="filtrarContactos('MFO')">MFO</button>
-          <button class="filtro-btn" onclick="filtrarContactos('Broker')">Brokers</button>
-          <button class="filtro-btn" onclick="filtrarContactos('Banca Privada')">Banca Privada</button>
-          <button class="filtro-btn" onclick="filtrarContactos('AFP')">AFP</button>
-        </div>
+        <!-- FONDO 2: DVBOF -->
         <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Empresa</th>
-                <th>Email</th>
-                <th>Tipo</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="tbContactos"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- REUNIONES PAGE -->
-      <div class="page" id="page-reuniones">
-        <div class="section-hd">
-          <h2 class="section-title">Reuniones</h2>
-          <button class="btn btn-primary" onclick="openModal('modal-reunion')">+ Nueva</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Contacto</th>
-                <th>Empresa</th>
-                <th>Producto</th>
-              </tr>
-            </thead>
-            <tbody id="tbReuniones"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- INVERSIONES PAGE -->
-      <div class="page" id="page-inversiones">
-        <div class="section-hd">
-          <h2 class="section-title">Inversiones</h2>
-          <button class="btn btn-primary" onclick="openModal('modal-inversion')">+ Nueva</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Contacto</th>
-                <th>Empresa</th>
-                <th>Fondo</th>
-                <th>Monto</th>
-              </tr>
-            </thead>
-            <tbody id="tbInversiones"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- FONDOS PAGE -->
-      <div class="page" id="page-fondos">
-        <div class="section-hd">
-          <h2 class="section-title">Fondos de Inversión</h2>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-          <div class="table-wrap">
-            <h3>Albion Portfolio One</h3>
-            <div style="margin-top:10px;font-size:12px;color:#999" id="apoCount">0 clientes</div>
-            <div id="fondoAPO" style="margin-top:15px"></div>
+          <div style="background:#211915; color:#b09366; padding:12px; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:16px; font-weight:600;">DVBOF</h3>
+            <span style="font-size:13px; color:#87868a;" id="dvb-count">0 clientes</span>
           </div>
-          <div class="table-wrap">
-            <h3>DVBOF</h3>
-            <div style="margin-top:10px;font-size:12px;color:#999" id="dvbCount">0 clientes</div>
-            <div id="fondoDVB" style="margin-top:15px"></div>
+          <div style="background:#f4f3f1; padding:16px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #d8d9dd;">
+              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">CLIENTE</div>
+              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">EMPRESA</div>
+              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">AUM</div>
+            </div>
+            <div id="fondo-dvb-list" style="min-height:100px;">
+              <div style="text-align:center; color:#87868a; padding:20px;">Sin clientes</div>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <!-- CONFIG PAGE -->
-      <div class="page" id="page-config">
-        <div class="section-hd">
-          <h2 class="section-title">Configuración</h2>
-        </div>
-        <div class="table-wrap" style="max-width:600px">
-          <div class="form-group">
-            <label>ID del Google Sheet</label>
-            <input type="text" id="sheetIdInput" placeholder="Ej: 1ufNV1Go5ssIOz2rrKXLghS9EvGtwYu3yCnP6o8TNV8Q">
-            <small style="color:#999;margin-top:5px;display:block">Encontrarás el ID en la URL: docs.google.com/spreadsheets/d/<strong>ID_AQUI</strong>/edit</small>
-          </div>
-          <button class="btn btn-primary" onclick="guardarConfig()" style="width:100%;margin-top:20px">Guardar Configuración</button>
-          <button class="btn btn-secondary" onclick="probarConexion()" style="width:100%;margin-top:10px">Probar Conexión</button>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- PAGE: CONFIGURACIÓN -->
+    <div class="page" id="page-config">
+      <div class="section-hd">
+        <h2 class="section-title">Configuración</h2>
+      </div>
+      <div class="table-wrap" style="padding:24px">
+        <div class="form-group">
+          <label>ID del Google Sheet</label>
+          <input type="text" id="configSheetId" placeholder="Pegue el ID del Google Sheet">
+          <small style="font-size:11px;color:var(--gris);margin-top:4px;display:block">Encontrará el ID en la URL: docs.google.com/spreadsheets/d/<strong>ID</strong>/edit</small>
+        </div>
+        <div class="form-group">
+          <label>URL de Google Apps Script</label>
+          <input type="text" id="configScriptUrl" placeholder="https://script.google.com/macros/d/...">
+          <small style="font-size:11px;color:var(--gris);margin-top:4px;display:block">URL del Apps Script deployado como web app</small>
+        </div>
+        <button class="btn btn-gold" onclick="saveConfig()">Guardar Configuración</button>
+        <button class="btn btn-secondary" onclick="testConnection()">Probar Conexión</button>
+      </div>
+    </div>
+  </main>
 </div>
 
-<!-- MODALES -->
-<div class="modal" id="modal-contacto">
-  <div class="modal-content">
-    <h2 class="modal-title">Nuevo Contacto</h2>
+<!-- MODALS -->
+<!-- Modal: Nuevo Contacto -->
+<div class="modal-overlay" id="modal-contacto">
+  <div class="modal">
+    <div class="modal-header">Nuevo Contacto</div>
     <form onsubmit="guardarContacto(event)">
       <div class="form-group">
         <label>Nombre</label>
-        <input type="text" id="inp-nombre" required>
+        <input type="text" id="c-nombre" required>
       </div>
       <div class="form-group">
         <label>Empresa</label>
-        <input type="text" id="inp-empresa" required>
+        <input type="text" id="c-grupo" required>
       </div>
       <div class="form-group">
         <label>Email</label>
-        <input type="email" id="inp-email" required>
+        <input type="email" id="c-email">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="c-telefono">
+      </div>
+      <div class="form-group">
+        <label>Cargo</label>
+        <input type="text" id="c-cargo">
       </div>
       <div class="form-group">
         <label>Tipo</label>
-        <select id="inp-tipo">
-          <option>MFO</option>
-          <option>Broker</option>
-          <option>Banca Privada</option>
-          <option>AFP</option>
+        <select id="c-tipo">
+          <option value="MFO">MFO</option>
+          <option value="Broker">Broker</option>
+          <option value="Cliente">Cliente</option>
+          <option value="Prospecto">Prospecto</option>
         </select>
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%">Guardar</button>
-      <button type="button" class="btn btn-secondary" onclick="closeModal('modal-contacto')" style="width:100%;margin-top:10px">Cancelar</button>
+      <div class="form-group">
+        <label>Estado</label>
+        <select id="c-estado">
+          <option value="Prospecto">Prospecto</option>
+          <option value="Caliente">Caliente</option>
+          <option value="Inactivo">Inactivo</option>
+          <option value="Convertido">Convertido</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notas</label>
+        <textarea id="c-notas"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-contacto')">Cancelar</button>
+        <button type="submit" class="btn btn-gold">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Agendar Reunión -->
+<div class="modal-overlay" id="modal-reunion">
+  <div class="modal">
+    <div class="modal-header">Agendar Reunión</div>
+    <form onsubmit="guardarReunion(event)">
+      <div class="form-group">
+        <label>Contacto</label>
+        <select id="r-contacto" required></select>
+      </div>
+      <div class="form-group">
+        <label>Fecha y Hora</label>
+        <input type="datetime-local" id="r-fecha" required>
+      </div>
+      <div class="form-group">
+        <label>Producto</label>
+        <input type="text" id="r-producto" placeholder="Ej: Portfolio One">
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea id="r-descripcion"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Próximo Paso</label>
+        <input type="text" id="r-proximo" placeholder="Ej: Enviar propuesta">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-reunion')">Cancelar</button>
+        <button type="submit" class="btn btn-gold">Agendar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Registrar Inversión -->
+<div class="modal-overlay" id="modal-inversion">
+  <div class="modal">
+    <div class="modal-header">Registrar Inversión</div>
+    <form onsubmit="guardarInversion(event)">
+      <div class="form-group">
+        <label>Contacto</label>
+        <select id="inv-contacto" required></select>
+      </div>
+      <div class="form-group">
+        <label>Fondo</label>
+        <select id="inv-fondo" required>
+          <option value="">-- Seleccionar fondo --</option>
+          <option value="Albion Portfolio One">Albion Portfolio One</option>
+          <option value="DVBOF">DVBOF</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Monto (USD)</label>
+        <input type="number" id="inv-monto" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label>Notas</label>
+        <textarea id="inv-notas"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-inversion')">Cancelar</button>
+        <button type="submit" class="btn btn-gold">Guardar</button>
+      </div>
     </form>
   </div>
 </div>
 
 <script>
-let config = {
-  sheetId: localStorage.getItem('sheetId') || ''
+// ===== CONFIGURACIÓN =====
+const config = {
+  sheetId: localStorage.getItem('sheetId') || '1CT1l8oJm5d-1VKoZGSHKh0q1vzaD4b1WWZSUuzwxwAQ',
+  scriptUrl: localStorage.getItem('scriptUrl') || '',
+  syncInterval: 5000
 };
 
 let data = {
@@ -430,184 +658,508 @@ let data = {
 
 let filtroActual = 'Todos';
 
-// ===== UI FUNCTIONS =====
-function showPage(pageName) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + pageName).classList.add('active');
-  
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  event.target.classList.add('active');
-}
-
-function openModal(id) {
-  document.getElementById(id).classList.add('active');
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove('active');
-}
-
-// ===== SHEET FUNCTIONS =====
-function guardarConfig() {
-  const sheetId = document.getElementById('sheetIdInput').value.trim();
-  if (!sheetId) {
-    alert('Por favor ingresa el ID del Google Sheet');
-    return;
-  }
-  config.sheetId = sheetId;
-  localStorage.setItem('sheetId', sheetId);
-  alert('✅ Configuración guardada');
-}
-
-async function probarConexion() {
-  if (!config.sheetId) {
-    alert('Por favor configura el ID del Google Sheet primero');
-    return;
-  }
-  
-  alert('⏳ Probando conexión...');
-  
-  try {
-    // Intentar descargar CSV
-    const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/export?format=csv&gid=0`;
-    const response = await fetch(url, {
-      mode: 'no-cors'
+// ===== INICIALIZACIÓN =====
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      const page = item.getAttribute('data-page');
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
     });
-    
-    alert('✅ ¡Conexión Exitosa!\n\nTu Dashboard está conectado a Google Sheets.');
-    sincronizar();
-  } catch (error) {
-    alert('❌ Error de conexión.\n\nAsegúrate que:\n1. El Google Sheet esté compartido públicamente\n2. El ID sea correcto\n3. Tengas internet');
-  }
-}
+  });
 
-async function sincronizar() {
+  cargarDelLocalStorage();
+  cargarContactosDelSheet();
+  document.getElementById('configSheetId').value = config.sheetId;
+  document.getElementById('configScriptUrl').value = config.scriptUrl;
+  
+  setInterval(syncWithSheets, config.syncInterval);
+});
+
+// ===== SINCRONIZACIÓN =====
+async function cargarContactosDelSheet() {
   try {
-    updateSyncStatus('⏳ Sincronizando...');
+    updateSyncStatus(false);
     
     if (!config.sheetId) {
-      updateSyncStatus('⚠️ Configura el Sheet');
+      alert('❌ Configura el ID del Google Sheet primero en ⚙️ Configuración');
       return;
     }
     
-    // Cargar datos de localStorage (demostración)
-    const stored = localStorage.getItem('datos');
-    if (stored) {
-      data = JSON.parse(stored);
-    } else {
-      // Datos de ejemplo
-      data.contactos = [
-        {id:'1',nombre:'Juan García',grupo:'Abaqus',email:'juan@example.com',tipo:'MFO',estado:'Prospecto'},
-        {id:'2',nombre:'María López',grupo:'Banchile',email:'maria@example.com',tipo:'Banca Privada',estado:'Prospecto'},
-      ];
+    // Método 1: Intentar API de Google Sheets directamente
+    const apiKey = 'AIzaSyAm4lQGz5k_tVzKBLQvgWOlUyWm6I7TyF4';
+    const ranges = ['Contactos!A:H', 'Reuniones!A:G', 'Inversiones!A:E'];
+    const sheetsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${apiKey}&ranges=${ranges.join(',')}&includeGridData=true`;
+    
+    console.log('Conectando a:', config.sheetId);
+    
+    try {
+      const response = await fetch(sheetsUrl);
+      
+      if (response.ok) {
+        const result = await response.json();
+        procesarDatosSheet(result);
+        updateSyncStatus(true);
+        showToast('✓ Sincronizado');
+        return;
+      }
+    } catch (e) {
+      console.log('API método falló, intentando CSV...');
     }
     
-    renderizar();
-    updateSyncStatus('✅ Sincronizado');
+    // Método 2: Si falla API, usar CSV export (funciona mejor en GitHub Pages)
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${config.sheetId}/export?format=csv&gid=0`;
+    const csvResponse = await fetch(csvUrl, { mode: 'no-cors' });
+    const csv = await csvResponse.text();
+    
+    procesarCSVDirecto(csv);
+    updateSyncStatus(true);
+    showToast('✓ Sincronizado (CSV)');
     
   } catch (error) {
-    console.error('Error:', error);
-    updateSyncStatus('❌ Error de sincronización');
+    console.error('Error de sincronización:', error);
+    updateSyncStatus(false);
+    showToast('❌ Error: Verifica que el Sheet esté compartido');
   }
 }
 
-// ===== RENDER FUNCTIONS =====
-function renderizar() {
-  renderContactos();
-  renderReuniones();
-  renderInversiones();
-  renderFondos();
-  actualizarMetricas();
+function procesarCSVDirecto(csv) {
+  try {
+    const lines = csv.trim().split('\n');
+    if (lines.length <= 1) return;
+    
+    data.contactos = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim());
+      if (cols[0]) {
+        data.contactos.push({
+          id: cols[0] || Date.now() + i,
+          nombre: cols[1] || '',
+          grupo: cols[2] || '',
+          email: cols[3] || '',
+          telefono: cols[4] || '',
+          cargo: cols[5] || '',
+          tipo: cols[6] || '',
+          estado: cols[7] || ''
+        });
+      }
+    }
+    
+    renderizar();
+    guardarEnLocalStorage();
+  } catch (e) {
+    console.error('Error procesando CSV:', e);
+  }
 }
 
-function renderContactos() {
-  const contactos = filtroActual === 'Todos' 
-    ? data.contactos 
-    : data.contactos.filter(c => c.tipo === filtroActual);
+function procesarDatosSheet(result) {
+  try {
+    if (result.sheets && result.sheets[0]) {
+      const contactosData = result.sheets[0].data[0].rowData;
+      data.contactos = [];
+      if (contactosData && contactosData.length > 1) {
+        for (let i = 1; i < contactosData.length; i++) {
+          const row = contactosData[i].values || [];
+          if (row[0] && row[0].userEnteredValue) {
+            data.contactos.push({
+              id: row[0]?.userEnteredValue?.stringValue || Date.now() + i,
+              nombre: row[1]?.userEnteredValue?.stringValue || '',
+              grupo: row[2]?.userEnteredValue?.stringValue || '',
+              email: row[3]?.userEnteredValue?.stringValue || '',
+              telefono: row[4]?.userEnteredValue?.stringValue || '',
+              cargo: row[5]?.userEnteredValue?.stringValue || '',
+              tipo: row[6]?.userEnteredValue?.stringValue || '',
+              estado: row[7]?.userEnteredValue?.stringValue || ''
+            });
+          }
+        }
+      }
+    }
+    
+    if (result.sheets && result.sheets[1]) {
+      const reunionesData = result.sheets[1].data[0].rowData;
+      data.reuniones = [];
+      if (reunionesData && reunionesData.length > 1) {
+        for (let i = 1; i < reunionesData.length; i++) {
+          const row = reunionesData[i].values || [];
+          if (row[0] && row[0].userEnteredValue) {
+            data.reuniones.push({
+              id: row[0]?.userEnteredValue?.stringValue || Date.now() + i,
+              fecha: row[1]?.userEnteredValue?.stringValue || '',
+              contacto: row[2]?.userEnteredValue?.stringValue || '',
+              empresa: row[3]?.userEnteredValue?.stringValue || '',
+              producto: row[4]?.userEnteredValue?.stringValue || '',
+              descripcion: row[5]?.userEnteredValue?.stringValue || '',
+              proximo: row[6]?.userEnteredValue?.stringValue || ''
+            });
+          }
+        }
+      }
+    }
+    
+    if (result.sheets && result.sheets[2]) {
+      const inversionesData = result.sheets[2].data[0].rowData;
+      data.inversiones = [];
+      if (inversionesData && inversionesData.length > 1) {
+        for (let i = 1; i < inversionesData.length; i++) {
+          const row = inversionesData[i].values || [];
+          if (row[0] && row[0].userEnteredValue) {
+            data.inversiones.push({
+              id: row[0]?.userEnteredValue?.stringValue || Date.now() + i,
+              contacto: row[1]?.userEnteredValue?.stringValue || '',
+              empresa: row[2]?.userEnteredValue?.stringValue || '',
+              fondo: row[3]?.userEnteredValue?.stringValue || '',
+              monto: row[4]?.userEnteredValue?.numberValue || 0
+            });
+          }
+        }
+      }
+    }
+    
+    renderizar();
+    guardarEnLocalStorage();
+  } catch (error) {
+    console.error('Error procesando:', error);
+  }
+}
+
+async function syncWithSheets() {
+  document.getElementById('btnSync').disabled = true;
+  try {
+    if (config.scriptUrl) {
+      await fetch(config.scriptUrl, {
+        method: 'POST',
+        body: JSON.stringify({action: 'sync', contactos: data.contactos, reuniones: data.reuniones, inversiones: data.inversiones})
+      }).catch(() => {});
+    }
+    await cargarContactosDelSheet();
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    document.getElementById('btnSync').disabled = false;
+  }
+}
+
+// ===== GUARDAR DATOS =====
+function guardarContacto(e) {
+  e.preventDefault();
+  const contacto = {
+    id: Date.now().toString(),
+    nombre: document.getElementById('c-nombre').value,
+    grupo: document.getElementById('c-grupo').value,
+    email: document.getElementById('c-email').value,
+    telefono: document.getElementById('c-telefono').value,
+    cargo: document.getElementById('c-cargo').value,
+    tipo: document.getElementById('c-tipo').value,
+    estado: document.getElementById('c-estado').value,
+    notas: document.getElementById('c-notas').value
+  };
+  data.contactos.push(contacto);
+  guardarEnLocalStorage();
+  syncWithSheets();
+  renderizar();
+  closeModal('modal-contacto');
+  document.getElementById('modal-contacto').querySelector('form').reset();
+  showToast('✓ Contacto guardado');
+}
+
+function guardarReunion(e) {
+  e.preventDefault();
+  const contactoId = document.getElementById('r-contacto').value;
+  const contacto = data.contactos.find(c => c.id === contactoId);
+  const reunion = {
+    id: Date.now().toString(),
+    fecha: document.getElementById('r-fecha').value,
+    contacto: contacto ? contacto.nombre : '',
+    empresa: contacto ? contacto.grupo : '',
+    producto: document.getElementById('r-producto').value,
+    descripcion: document.getElementById('r-descripcion').value,
+    proximo: document.getElementById('r-proximo').value
+  };
+  data.reuniones.push(reunion);
+  guardarEnLocalStorage();
+  syncWithSheets();
+  renderizar();
+  closeModal('modal-reunion');
+  document.getElementById('modal-reunion').querySelector('form').reset();
+  showToast('✓ Reunión agendada');
+}
+
+function guardarInversion(e) {
+  e.preventDefault();
+  const contactoId = document.getElementById('inv-contacto').value;
+  const contacto = data.contactos.find(c => c.id === contactoId);
+  const inversion = {
+    id: Date.now().toString(),
+    contacto: contacto ? contacto.nombre : '',
+    empresa: contacto ? contacto.grupo : '',
+    fondo: document.getElementById('inv-fondo').value,
+    monto: document.getElementById('inv-monto').value
+  };
+  data.inversiones.push(inversion);
+  guardarEnLocalStorage();
+  syncWithSheets();
+  renderizar();
+  closeModal('modal-inversion');
+  document.getElementById('modal-inversion').querySelector('form').reset();
+  showToast('✓ Inversión registrada');
+}
+
+// ===== RENDERIZAR =====
+function renderizar() {
+  const contactosRecientes = data.contactos.slice(-5);
+  const reunionesProximas = [...data.reuniones].sort((a,b) => new Date(a.fecha) - new Date(b.fecha)).filter(r => new Date(r.fecha) > new Date()).slice(0, 5);
   
-  document.getElementById('tbContactos').innerHTML = contactos.map(c => `
+  document.getElementById('kpiContactos').textContent = data.contactos.length;
+  document.getElementById('kpiReuniones').textContent = reunionesProximas.length;
+  document.getElementById('kpiCalientes').textContent = data.contactos.filter(c => c.estado === 'Caliente').length;
+  document.getElementById('kpiInversiones').textContent = data.inversiones.length;
+
+  // Dashboard
+  document.getElementById('tbodyContactos').innerHTML = contactosRecientes.map(c => `
     <tr>
-      <td>${c.nombre}</td>
+      <td><strong>${c.nombre}</strong></td>
       <td>${c.grupo}</td>
       <td>${c.email}</td>
-      <td><strong>${c.tipo}</strong></td>
-      <td>${c.estado}</td>
+      <td><span class="badge ${getBadgeClass(c.estado)}">${c.estado}</span></td>
+      <td><button class="btn btn-sm btn-secondary" onclick="eliminarContacto('${c.id}')">Eliminar</button></td>
     </tr>
   `).join('');
-}
 
-function renderReuniones() {
-  document.getElementById('tbReuniones').innerHTML = data.reuniones.map(r => `
+  document.getElementById('tbodyReuniones').innerHTML = reunionesProximas.map(r => `
     <tr>
-      <td>${r.fecha || '-'}</td>
+      <td>${formatFecha(r.fecha)}</td>
+      <td>${r.contacto}</td>
+      <td>${r.producto}</td>
+      <td>${r.proximo}</td>
+      <td><button class="btn btn-sm btn-secondary" onclick="eliminarReunion('${r.id}')">Eliminar</button></td>
+    </tr>
+  `).join('');
+
+  // Contactos completo
+  document.getElementById('tbodyContactosAll').innerHTML = data.contactos.map(c => `
+    <tr>
+      <td><strong>${c.nombre}</strong></td>
+      <td>${c.grupo}</td>
+      <td>${c.cargo}</td>
+      <td>${c.email}</td>
+      <td><strong>${c.tipo}</strong></td>
+      <td><span class="badge ${getBadgeClass(c.estado)}">${c.estado}</span></td>
+      <td><button class="btn btn-sm btn-secondary" onclick="eliminarContacto('${c.id}')">Eliminar</button></td>
+    </tr>
+  `).join('');
+
+  // Reuniones completo
+  document.getElementById('tbodyReunionesAll').innerHTML = data.reuniones.map(r => `
+    <tr>
+      <td>${formatFecha(r.fecha)}</td>
       <td>${r.contacto}</td>
       <td>${r.empresa}</td>
       <td>${r.producto}</td>
+      <td>${r.proximo}</td>
+      <td><button class="btn btn-sm btn-secondary" onclick="eliminarReunion('${r.id}')">Eliminar</button></td>
     </tr>
   `).join('');
-}
 
-function renderInversiones() {
-  document.getElementById('tbInversiones').innerHTML = data.inversiones.map(i => `
+  // Inversiones
+  document.getElementById('tbodyInversiones').innerHTML = data.inversiones.map(inv => `
     <tr>
-      <td>${i.contacto}</td>
-      <td>${i.empresa}</td>
-      <td>${i.fondo}</td>
-      <td>$${parseFloat(i.monto).toLocaleString()}</td>
+      <td>${inv.contacto}</td>
+      <td>${inv.empresa}</td>
+      <td>${inv.fondo}</td>
+      <td>$${parseFloat(inv.monto).toLocaleString()}</td>
+      <td><button class="btn btn-sm btn-secondary" onclick="eliminarInversion('${inv.id}')">Eliminar</button></td>
     </tr>
   `).join('');
+
+  // Fondos
+  renderizarFondos();
+
+  actualizarSelectores();
 }
 
-function renderFondos() {
-  const apo = data.inversiones.filter(i => i.fondo === 'Albion Portfolio One');
-  const dvb = data.inversiones.filter(i => i.fondo === 'DVBOF');
+// ===== RENDERIZAR FONDOS =====
+function renderizarFondos() {
+  const inv_apo = data.inversiones.filter(inv => inv.fondo === 'Albion Portfolio One');
+  const inv_dvb = data.inversiones.filter(inv => inv.fondo === 'DVBOF');
   
-  document.getElementById('apoCount').textContent = apo.length + ' cliente' + (apo.length !== 1 ? 's' : '');
-  document.getElementById('dvbCount').textContent = dvb.length + ' cliente' + (dvb.length !== 1 ? 's' : '');
-}
-
-function actualizarMetricas() {
-  document.getElementById('totalContactos').textContent = data.contactos.length;
-  document.getElementById('totalMFO').textContent = data.contactos.filter(c => c.tipo === 'MFO').length;
-  document.getElementById('totalBrokers').textContent = data.contactos.filter(c => c.tipo === 'Broker').length;
-  document.getElementById('totalAFP').textContent = data.contactos.filter(c => c.tipo === 'AFP').length;
-}
-
-function filtrarContactos(tipo) {
-  filtroActual = tipo;
-  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  renderContactos();
-}
-
-function updateSyncStatus(msg) {
-  document.getElementById('syncStatus').textContent = msg;
-}
-
-function guardarContacto(e) {
-  e.preventDefault();
+  // Albion Portfolio One
+  document.getElementById('apo-count').textContent = inv_apo.length + ' cliente' + (inv_apo.length !== 1 ? 's' : '');
+  document.getElementById('fondo-apo-list').innerHTML = inv_apo.length === 0 
+    ? '<div style="text-align:center; color:#87868a; padding:20px;">Sin clientes</div>'
+    : inv_apo.map(inv => `
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:8px; padding:8px 0; border-bottom:1px solid #d8d9dd;">
+        <div style="font-size:12px; color:#211915;">${inv.contacto}</div>
+        <div style="font-size:12px; color:#87868a;">${inv.empresa}</div>
+        <div style="font-size:12px; font-weight:600; color:#b09366;">$${parseFloat(inv.monto).toLocaleString()}</div>
+      </div>
+    `).join('');
   
-  const contacto = {
-    id: Date.now().toString(),
-    nombre: document.getElementById('inp-nombre').value,
-    grupo: document.getElementById('inp-empresa').value,
-    email: document.getElementById('inp-email').value,
-    tipo: document.getElementById('inp-tipo').value,
-    estado: 'Prospecto'
+  // DVBOF
+  document.getElementById('dvb-count').textContent = inv_dvb.length + ' cliente' + (inv_dvb.length !== 1 ? 's' : '');
+  document.getElementById('fondo-dvb-list').innerHTML = inv_dvb.length === 0
+    ? '<div style="text-align:center; color:#87868a; padding:20px;">Sin clientes</div>'
+    : inv_dvb.map(inv => `
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:8px; padding:8px 0; border-bottom:1px solid #d8d9dd;">
+        <div style="font-size:12px; color:#211915;">${inv.contacto}</div>
+        <div style="font-size:12px; color:#87868a;">${inv.empresa}</div>
+        <div style="font-size:12px; font-weight:600; color:#b09366;">$${parseFloat(inv.monto).toLocaleString()}</div>
+      </div>
+    `).join('');
+}
+
+function actualizarSelectores() {
+  const opts = data.contactos.map(c => `<option value="${c.id}">${c.nombre} (${c.grupo})</option>`).join('');
+  document.getElementById('r-contacto').innerHTML = '<option value="">-- Seleccionar --</option>' + opts;
+  document.getElementById('inv-contacto').innerHTML = '<option value="">-- Seleccionar --</option>' + opts;
+}
+
+// ===== FILTRADO =====
+function filtrarPorTipo(tipo) {
+  // Actualizar botones
+  document.querySelectorAll('[id^="filtro-"]').forEach(btn => {
+    btn.classList.remove('btn-gold');
+    btn.classList.add('btn-secondary');
+  });
+  
+  const mapeo = {
+    'Todos': 'filtro-todos',
+    'MFO': 'filtro-mfo',
+    'Broker': 'filtro-broker',
+    'Banca Privada': 'filtro-banco',
+    'AFP': 'filtro-afp'
   };
   
-  data.contactos.push(contacto);
-  localStorage.setItem('datos', JSON.stringify(data));
+  if (mapeo[tipo]) {
+    document.getElementById(mapeo[tipo]).classList.remove('btn-secondary');
+    document.getElementById(mapeo[tipo]).classList.add('btn-gold');
+  }
   
-  closeModal('modal-contacto');
-  e.target.reset();
-  renderizar();
-  alert('✅ Contacto guardado');
+  // Filtrar contactos
+  let contactosFiltrados = data.contactos;
+  
+  if (tipo !== 'Todos') {
+    contactosFiltrados = data.contactos.filter(c => c.tipo === tipo);
+  }
+  
+  // Renderizar tabla filtrada
+  document.getElementById('tbodyContactosAll').innerHTML = contactosFiltrados.map(c => `
+    <tr>
+      <td><strong>${c.nombre}</strong></td>
+      <td>${c.grupo}</td>
+      <td>${c.cargo}</td>
+      <td>${c.email}</td>
+      <td><strong>${c.tipo}</strong></td>
+      <td><span class="badge ${getBadgeClass(c.estado)}">${c.estado}</span></td>
+      <td><button class="btn btn-sm btn-secondary" onclick="eliminarContacto('${c.id}')">Eliminar</button></td>
+    </tr>
+  `).join('');
 }
 
-// Init
-document.getElementById('sheetIdInput').value = config.sheetId;
-sincronizar();
+// ===== UTILIDADES =====
+function getBadgeClass(estado) {
+  const classes = {
+    'Caliente': 'badge-green',
+    'Convertido': 'badge-green',
+    'Prospecto': 'badge-blue',
+    'Inactivo': 'badge-red'
+  };
+  return classes[estado] || 'badge-blue';
+}
+
+function formatFecha(fecha) {
+  return new Date(fecha).toLocaleDateString('es-CL', {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+}
+
+function eliminarContacto(id) {
+  if (confirm('¿Eliminar?')) {
+    data.contactos = data.contactos.filter(c => c.id !== id);
+    guardarEnLocalStorage();
+    syncWithSheets();
+    renderizar();
+    showToast('✓ Contacto eliminado');
+  }
+}
+
+function eliminarReunion(id) {
+  if (confirm('¿Eliminar?')) {
+    data.reuniones = data.reuniones.filter(r => r.id !== id);
+    guardarEnLocalStorage();
+    syncWithSheets();
+    renderizar();
+    showToast('✓ Reunión eliminada');
+  }
+}
+
+function eliminarInversion(id) {
+  if (confirm('¿Eliminar?')) {
+    data.inversiones = data.inversiones.filter(i => i.id !== id);
+    guardarEnLocalStorage();
+    syncWithSheets();
+    renderizar();
+    showToast('✓ Inversión eliminada');
+  }
+}
+
+// ===== LOCAL STORAGE =====
+function guardarEnLocalStorage() {
+  localStorage.setItem('dashboardData', JSON.stringify(data));
+}
+
+function cargarDelLocalStorage() {
+  const saved = localStorage.getItem('dashboardData');
+  if (saved) {
+    data = JSON.parse(saved);
+    renderizar();
+  }
+}
+
+// ===== MODALES =====
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ===== SYNC STATUS =====
+function updateSyncStatus(connected) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  if (connected) {
+    dot.classList.add('connected');
+    text.textContent = 'Sincronizado';
+  } else {
+    dot.classList.remove('connected');
+    text.textContent = 'Sincronizando...';
+  }
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// ===== CONFIGURACIÓN =====
+function saveConfig() {
+  config.sheetId = document.getElementById('configSheetId').value;
+  config.scriptUrl = document.getElementById('configScriptUrl').value;
+  localStorage.setItem('sheetId', config.sheetId);
+  localStorage.setItem('scriptUrl', config.scriptUrl);
+  showToast('✓ Guardado');
+  cargarContactosDelSheet();
+}
+
+function testConnection() {
+  cargarContactosDelSheet();
+}
 </script>
 </body>
 </html>
