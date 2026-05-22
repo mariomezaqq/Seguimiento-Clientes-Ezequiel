@@ -825,9 +825,20 @@ function guardarContacto(e) {
     estado: document.getElementById('c-estado').value,
     notas: document.getElementById('c-notas').value
   };
+  
   data.contactos.push(contacto);
   guardarEnLocalStorage();
-  // NO llamar a syncWithSheets() para evitar POST bloqueado
+  
+  // Guardar AUTOMÁTICAMENTE en Google Sheet
+  if (config.scriptUrl) {
+    fetch(config.scriptUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ type: 'contacto', contacto: contacto })
+    }).catch(err => console.log('Se guardó localmente, enviando al Sheet...'));
+  }
+  
   renderizar();
   closeModal('modal-contacto');
   document.getElementById('modal-contacto').querySelector('form').reset();
@@ -847,9 +858,20 @@ function guardarReunion(e) {
     descripcion: document.getElementById('r-descripcion').value,
     proximo: document.getElementById('r-proximo').value
   };
+  
   data.reuniones.push(reunion);
   guardarEnLocalStorage();
-  // NO llamar a syncWithSheets() para evitar POST bloqueado
+  
+  // Guardar AUTOMÁTICAMENTE en Google Sheet
+  if (config.scriptUrl) {
+    fetch(config.scriptUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ type: 'reunion', reunion: reunion })
+    }).catch(err => console.log('Se guardó localmente, enviando al Sheet...'));
+  }
+  
   renderizar();
   closeModal('modal-reunion');
   document.getElementById('modal-reunion').querySelector('form').reset();
@@ -867,9 +889,20 @@ function guardarInversion(e) {
     fondo: document.getElementById('inv-fondo').value,
     monto: document.getElementById('inv-monto').value
   };
+  
   data.inversiones.push(inversion);
   guardarEnLocalStorage();
-  // NO llamar a syncWithSheets() para evitar POST bloqueado
+  
+  // Guardar AUTOMÁTICAMENTE en Google Sheet
+  if (config.scriptUrl) {
+    fetch(config.scriptUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ type: 'inversion', inversion: inversion })
+    }).catch(err => console.log('Se guardó localmente, enviando al Sheet...'));
+  }
+  
   renderizar();
   closeModal('modal-inversion');
   document.getElementById('modal-inversion').querySelector('form').reset();
