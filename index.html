@@ -830,107 +830,68 @@ function procesarDatosSheet(result) {
 async function syncWithSheets() {
   document.getElementById('btnSync').disabled = true;
   try {
-    if (config.scriptUrl) {
-      // Enviar últimos cambios al Google Sheet
-      // El dashboard guarda en localStorage, aquí sincronizamos
-      
-      // Obtener los datos locales
-      const stored = localStorage.getItem('dashboardData');
-      if (stored) {
-        const localData = JSON.parse(stored);
-        
-        // Por ahora solo sincronizamos lectura (GET)
-        // La escritura se hace directamente al agregar items
-        console.log('Sincronizando datos locales con Sheet...');
-      }
-    }
-    
-    // Descargar datos del Sheet
+    // Descargar datos del Sheet (READ)
     await cargarContactosDelSheet();
+    
+    showToast('✓ Datos sincronizados desde Sheet');
     
   } catch (error) {
     console.error('Error en syncWithSheets:', error);
+    showToast('❌ Error al sincronizar');
   } finally {
     document.getElementById('btnSync').disabled = false;
   }
 }
 
+function exportarDatos() {
+  try {
+    const datos = {
+      contactos: data.contactos,
+      reuniones: data.reuniones,
+      inversiones: data.inversiones,
+      fecha: new Date().toISOString()
+    };
+    
+    const json = JSON.stringify(datos, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'albion-dashboard-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    
+    showToast('✓ Datos exportados a JSON');
+  } catch (error) {
+    console.error('Error al exportar:', error);
+    showToast('❌ Error al exportar');
+  }
+}
+
 async function guardarContactoEnSheet(contacto) {
   try {
-    if (!config.scriptUrl) {
-      console.log('Sin URL de Apps Script, guardado local solamente');
-      return;
-    }
-    
-    const response = await fetch(config.scriptUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        type: 'contacto',
-        contacto: contacto
-      })
-    });
-    
-    const result = await response.json();
-    console.log('Contacto guardado en Sheet:', result);
-    
+    // CORS bloquea POST a Google Apps Script
+    // Solución: Guardar solo localmente
+    // Los usuarios pueden descargar manualmente los datos desde el Dashboard
+    console.log('Contacto guardado localmente:', contacto);
+    // No intentar POST ya que Google bloquea CORS
   } catch (error) {
-    console.error('Error al guardar contacto en Sheet:', error);
-    // Continúa sin error, al menos se guardó localmente
+    console.error('Error:', error);
   }
 }
 
 async function guardarReunionEnSheet(reunion) {
   try {
-    if (!config.scriptUrl) {
-      console.log('Sin URL de Apps Script, guardado local solamente');
-      return;
-    }
-    
-    const response = await fetch(config.scriptUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        type: 'reunion',
-        reunion: reunion
-      })
-    });
-    
-    const result = await response.json();
-    console.log('Reunión guardada en Sheet:', result);
-    
+    console.log('Reunión guardada localmente:', reunion);
   } catch (error) {
-    console.error('Error al guardar reunión en Sheet:', error);
+    console.error('Error:', error);
   }
 }
 
 async function guardarInversionEnSheet(inversion) {
   try {
-    if (!config.scriptUrl) {
-      console.log('Sin URL de Apps Script, guardado local solamente');
-      return;
-    }
-    
-    const response = await fetch(config.scriptUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        type: 'inversion',
-        inversion: inversion
-      })
-    });
-    
-    const result = await response.json();
-    console.log('Inversión guardada en Sheet:', result);
-    
+    console.log('Inversión guardada localmente:', inversion);
   } catch (error) {
-    console.error('Error al guardar inversión en Sheet:', error);
+    console.error('Error:', error);
   }
 }
 
