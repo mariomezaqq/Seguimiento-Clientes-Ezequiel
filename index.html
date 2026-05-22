@@ -684,75 +684,47 @@ async function cargarContactosDelSheet() {
     updateSyncStatus(false);
     
     if (!config.scriptUrl) {
-      showToast('❌ Configura la URL del Apps Script en Configuración');
-      return;
-    }
-    
-    console.log('Conectando a:', config.scriptUrl);
-    
-    // Llamar al Google Apps Script
-    const response = await fetch(config.scriptUrl, {
-      method: 'GET',
-      mode: 'cors'
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Error desconocido');
-    }
-    
-    // Cargar datos
-    data.contactos = result.contactos || [];
-    data.reuniones = result.reuniones || [];
-    data.inversiones = result.inversiones || [];
-    
-    console.log('✅ Contactos cargados:', data.contactos.length);
-    console.log('✅ Reuniones cargadas:', data.reuniones.length);
-    console.log('✅ Inversiones cargadas:', data.inversiones.length);
-    
-    renderizar();
-    guardarEnLocalStorage();
-    updateSyncStatus(true);
-    showToast('✓ Sincronizado - ' + data.contactos.length + ' contactos');
-    
-  } catch (error) {
-    console.error('Error de sincronización:', error);
-    updateSyncStatus(false);
-    showToast('❌ Error: ' + error.message);
-  }
-}
-
-function procesarCSVDirecto(csv) {
-  try {
-    const lines = csv.trim().split('\n');
-    if (lines.length <= 1) return;
-    
-    data.contactos = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim());
-      if (cols[0]) {
-        data.contactos.push({
-          id: cols[0] || Date.now() + i,
-          nombre: cols[1] || '',
-          grupo: cols[2] || '',
-          email: cols[3] || '',
-          telefono: cols[4] || '',
-          cargo: cols[5] || '',
-          tipo: cols[6] || '',
-          estado: cols[7] || ''
-        });
+      console.log('Sin URL de Apps Script, usando API de Google Sheets');
+      // Usar API como fallback
+      const apiKey = 'AIzaSyAm4lQGz5k_tVzKBLQvgWOlUyWm6I7TyF4';
+      const ranges = ['Contactos!A:H', 'Reuniones!A:G', 'Inversiones!A:E'];
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${apiKey}&ranges=${ranges.join(',')}&includeGridData=true`;
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Error cargando del Sheet');
+      
+      const result = await response.json();
+      procesarDatosSheet(result);
+    } else {
+      // Usar Google Apps Script
+      console.log('Cargando datos del Apps Script:', config.scriptUrl);
+      const response = await fetch(config.scriptUrl, {
+        method: 'GET',
+        mode: 'cors'
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        data.contactos = result.contactos || [];
+        data.reuniones = result.reuniones || [];
+        data.inversiones = result.inversiones || [];
+        renderizar();
+        guardarEnLocalStorage();
+      } else {
+        throw new Error(result.error || 'Error del servidor');
       }
     }
     
-    renderizar();
-    guardarEnLocalStorage();
-  } catch (e) {
-    console.error('Error procesando CSV:', e);
+    updateSyncStatus(true);
+    showToast('✓ Sincronizado');
+    
+  } catch (error) {
+    console.error('Error al cargar:', error);
+    updateSyncStatus(false);
+    showToast('❌ Error: ' + error.message);
   }
 }
 
@@ -830,68 +802,12 @@ function procesarDatosSheet(result) {
 async function syncWithSheets() {
   document.getElementById('btnSync').disabled = true;
   try {
-    // Descargar datos del Sheet (READ)
+    // Solo descargar datos (GET), no intentar escribir (POST)
     await cargarContactosDelSheet();
-    
-    showToast('✓ Datos sincronizados desde Sheet');
-    
   } catch (error) {
-    console.error('Error en syncWithSheets:', error);
-    showToast('❌ Error al sincronizar');
+    console.error('Error:', error);
   } finally {
     document.getElementById('btnSync').disabled = false;
-  }
-}
-
-function exportarDatos() {
-  try {
-    const datos = {
-      contactos: data.contactos,
-      reuniones: data.reuniones,
-      inversiones: data.inversiones,
-      fecha: new Date().toISOString()
-    };
-    
-    const json = JSON.stringify(datos, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'albion-dashboard-' + new Date().toISOString().split('T')[0] + '.json';
-    a.click();
-    
-    showToast('✓ Datos exportados a JSON');
-  } catch (error) {
-    console.error('Error al exportar:', error);
-    showToast('❌ Error al exportar');
-  }
-}
-
-async function guardarContactoEnSheet(contacto) {
-  try {
-    // CORS bloquea POST a Google Apps Script
-    // Solución: Guardar solo localmente
-    // Los usuarios pueden descargar manualmente los datos desde el Dashboard
-    console.log('Contacto guardado localmente:', contacto);
-    // No intentar POST ya que Google bloquea CORS
-  } catch (error) {
-    console.error('Error:', error);
-  }
-}
-
-async function guardarReunionEnSheet(reunion) {
-  try {
-    console.log('Reunión guardada localmente:', reunion);
-  } catch (error) {
-    console.error('Error:', error);
-  }
-}
-
-async function guardarInversionEnSheet(inversion) {
-  try {
-    console.log('Inversión guardada localmente:', inversion);
-  } catch (error) {
-    console.error('Error:', error);
   }
 }
 
@@ -909,13 +825,9 @@ function guardarContacto(e) {
     estado: document.getElementById('c-estado').value,
     notas: document.getElementById('c-notas').value
   };
-  
   data.contactos.push(contacto);
   guardarEnLocalStorage();
-  
-  // Guardar también en el Google Sheet
-  guardarContactoEnSheet(contacto);
-  
+  // NO llamar a syncWithSheets() para evitar POST bloqueado
   renderizar();
   closeModal('modal-contacto');
   document.getElementById('modal-contacto').querySelector('form').reset();
@@ -935,13 +847,9 @@ function guardarReunion(e) {
     descripcion: document.getElementById('r-descripcion').value,
     proximo: document.getElementById('r-proximo').value
   };
-  
   data.reuniones.push(reunion);
   guardarEnLocalStorage();
-  
-  // Guardar también en el Google Sheet
-  guardarReunionEnSheet(reunion);
-  
+  // NO llamar a syncWithSheets() para evitar POST bloqueado
   renderizar();
   closeModal('modal-reunion');
   document.getElementById('modal-reunion').querySelector('form').reset();
@@ -959,13 +867,9 @@ function guardarInversion(e) {
     fondo: document.getElementById('inv-fondo').value,
     monto: document.getElementById('inv-monto').value
   };
-  
   data.inversiones.push(inversion);
   guardarEnLocalStorage();
-  
-  // Guardar también en el Google Sheet
-  guardarInversionEnSheet(inversion);
-  
+  // NO llamar a syncWithSheets() para evitar POST bloqueado
   renderizar();
   closeModal('modal-inversion');
   document.getElementById('modal-inversion').querySelector('form').reset();
