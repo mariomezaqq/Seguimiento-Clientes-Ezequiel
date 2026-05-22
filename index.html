@@ -831,16 +831,106 @@ async function syncWithSheets() {
   document.getElementById('btnSync').disabled = true;
   try {
     if (config.scriptUrl) {
-      await fetch(config.scriptUrl, {
-        method: 'POST',
-        body: JSON.stringify({action: 'sync', contactos: data.contactos, reuniones: data.reuniones, inversiones: data.inversiones})
-      }).catch(() => {});
+      // Enviar últimos cambios al Google Sheet
+      // El dashboard guarda en localStorage, aquí sincronizamos
+      
+      // Obtener los datos locales
+      const stored = localStorage.getItem('dashboardData');
+      if (stored) {
+        const localData = JSON.parse(stored);
+        
+        // Por ahora solo sincronizamos lectura (GET)
+        // La escritura se hace directamente al agregar items
+        console.log('Sincronizando datos locales con Sheet...');
+      }
     }
+    
+    // Descargar datos del Sheet
     await cargarContactosDelSheet();
+    
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error en syncWithSheets:', error);
   } finally {
     document.getElementById('btnSync').disabled = false;
+  }
+}
+
+async function guardarContactoEnSheet(contacto) {
+  try {
+    if (!config.scriptUrl) {
+      console.log('Sin URL de Apps Script, guardado local solamente');
+      return;
+    }
+    
+    const response = await fetch(config.scriptUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'contacto',
+        contacto: contacto
+      })
+    });
+    
+    const result = await response.json();
+    console.log('Contacto guardado en Sheet:', result);
+    
+  } catch (error) {
+    console.error('Error al guardar contacto en Sheet:', error);
+    // Continúa sin error, al menos se guardó localmente
+  }
+}
+
+async function guardarReunionEnSheet(reunion) {
+  try {
+    if (!config.scriptUrl) {
+      console.log('Sin URL de Apps Script, guardado local solamente');
+      return;
+    }
+    
+    const response = await fetch(config.scriptUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'reunion',
+        reunion: reunion
+      })
+    });
+    
+    const result = await response.json();
+    console.log('Reunión guardada en Sheet:', result);
+    
+  } catch (error) {
+    console.error('Error al guardar reunión en Sheet:', error);
+  }
+}
+
+async function guardarInversionEnSheet(inversion) {
+  try {
+    if (!config.scriptUrl) {
+      console.log('Sin URL de Apps Script, guardado local solamente');
+      return;
+    }
+    
+    const response = await fetch(config.scriptUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'inversion',
+        inversion: inversion
+      })
+    });
+    
+    const result = await response.json();
+    console.log('Inversión guardada en Sheet:', result);
+    
+  } catch (error) {
+    console.error('Error al guardar inversión en Sheet:', error);
   }
 }
 
@@ -858,9 +948,13 @@ function guardarContacto(e) {
     estado: document.getElementById('c-estado').value,
     notas: document.getElementById('c-notas').value
   };
+  
   data.contactos.push(contacto);
   guardarEnLocalStorage();
-  syncWithSheets();
+  
+  // Guardar también en el Google Sheet
+  guardarContactoEnSheet(contacto);
+  
   renderizar();
   closeModal('modal-contacto');
   document.getElementById('modal-contacto').querySelector('form').reset();
@@ -880,9 +974,13 @@ function guardarReunion(e) {
     descripcion: document.getElementById('r-descripcion').value,
     proximo: document.getElementById('r-proximo').value
   };
+  
   data.reuniones.push(reunion);
   guardarEnLocalStorage();
-  syncWithSheets();
+  
+  // Guardar también en el Google Sheet
+  guardarReunionEnSheet(reunion);
+  
   renderizar();
   closeModal('modal-reunion');
   document.getElementById('modal-reunion').querySelector('form').reset();
@@ -900,9 +998,13 @@ function guardarInversion(e) {
     fondo: document.getElementById('inv-fondo').value,
     monto: document.getElementById('inv-monto').value
   };
+  
   data.inversiones.push(inversion);
   guardarEnLocalStorage();
-  syncWithSheets();
+  
+  // Guardar también en el Google Sheet
+  guardarInversionEnSheet(inversion);
+  
   renderizar();
   closeModal('modal-inversion');
   document.getElementById('modal-inversion').querySelector('form').reset();
