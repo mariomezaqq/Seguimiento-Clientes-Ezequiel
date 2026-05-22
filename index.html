@@ -682,20 +682,44 @@ document.addEventListener('DOMContentLoaded', () => {
 async function cargarContactosDelSheet() {
   try {
     updateSyncStatus(false);
+    if (!config.sheetId) {
+      alert('❌ ERROR: No has configurado el ID del Google Sheet. Ve a ⚙️ Configuración e ingresa el ID.');
+      return;
+    }
+    
     const apiKey = 'AIzaSyAm4lQGz5k_tVzKBLQvgWOlUyWm6I7TyF4';
     const ranges = ['Contactos!A:H', 'Reuniones!A:G', 'Inversiones!A:E'];
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${apiKey}&ranges=${ranges.join(',')}&includeGridData=true`;
     
+    console.log('Conectando a:', url);
+    
     const response = await fetch(url);
-    if (!response.ok) throw new Error('Error');
+    
+    if (response.status === 403) {
+      alert('❌ ERROR 403: Acceso denegado\n\n¿TU GOOGLE SHEET ESTÁ COMPARTIDO?\n\n📋 Pasos para arreglarlo:\n1. Abre tu Google Sheet\n2. Click "Compartir" (arriba a la derecha)\n3. En "Cambiar quién tiene acceso", selecciona:\n   "Cualquiera que tenga el link"\n4. El acceso debe ser: "Visor"\n5. Click "Compartir"\n6. Vuelve aquí y haz click en "Probar Conexión" de nuevo');
+      updateSyncStatus(false);
+      return;
+    }
+    
+    if (response.status === 404) {
+      alert('❌ ERROR 404: Google Sheet no encontrado\n\nVerifica que el ID del Sheet sea correcto.\n\nVa a estar en la URL:\nhttps://docs.google.com/spreadsheets/d/[ESTE_ID_AQUI]/edit');
+      updateSyncStatus(false);
+      return;
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Error HTTP ${response.status}`);
+    }
     
     const result = await response.json();
     procesarDatosSheet(result);
     updateSyncStatus(true);
+    alert('✅ ¡CONEXIÓN EXITOSA!\n\nTu Dashboard está sincronizado con Google Sheets.');
     showToast('✓ Sincronizado');
   } catch (error) {
     console.error('Error:', error);
     updateSyncStatus(false);
+    alert(`❌ ERROR DE CONEXIÓN:\n\n${error.message}\n\n📋 Pasos para arreglarlo:\n1. Verifica tu conexión a internet\n2. Asegúrate que tu Google Sheet esté compartido públicamente\n3. Copia correctamente el ID del Sheet\n4. Intenta de nuevo`);
   }
 }
 
