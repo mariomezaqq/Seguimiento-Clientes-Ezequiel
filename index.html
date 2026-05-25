@@ -379,6 +379,13 @@ textarea{min-height:100px;resize:vertical}
         <button class="btn btn-primary btn-sm" onclick="openModal('modal-contacto')">+ Nuevo Contacto</button>
       </div>
       
+      <!-- BUSCADOR -->
+      <div style="margin-bottom: 20px;">
+        <input type="text" placeholder="🔍 Buscar por nombre, empresa o email..." 
+               onkeyup="buscarContacto(this.value)" 
+               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;">
+      </div>
+      
       <!-- FILTROS POR CATEGORÍA -->
       <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
         <button class="btn btn-gold btn-sm" onclick="filtrarPorTipo('Todos')" id="filtro-todos">📊 Todos (337)</button>
@@ -657,6 +664,8 @@ let data = {
 };
 
 let filtroActual = 'Todos';
+let busquedaActual = '';
+let contactoEditando = null;
 
 // ===== INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -926,7 +935,10 @@ function renderizar() {
       <td>${c.grupo}</td>
       <td>${c.email}</td>
       <td><span class="badge ${getBadgeClass(c.estado)}">${c.estado}</span></td>
-      <td><button class="btn btn-sm btn-secondary" onclick="eliminarContacto('${c.id}')">Eliminar</button></td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="editarContacto('${c.id}')">Editar</button>
+        <button class="btn btn-sm btn-secondary" onclick="eliminarContacto('${c.id}')">Eliminar</button>
+      </td>
     </tr>
   `).join('');
 
@@ -940,8 +952,16 @@ function renderizar() {
     </tr>
   `).join('');
 
-  // Contactos completo
-  document.getElementById('tbodyContactosAll').innerHTML = data.contactos.map(c => `
+  // Contactos completo (con búsqueda)
+  const contactosFiltrados = data.contactos.filter(c => {
+    const coincidenBusqueda = busquedaActual === '' || 
+      c.nombre.toLowerCase().includes(busquedaActual.toLowerCase()) ||
+      c.grupo.toLowerCase().includes(busquedaActual.toLowerCase()) ||
+      c.email.toLowerCase().includes(busquedaActual.toLowerCase());
+    return coincidenBusqueda;
+  });
+
+  document.getElementById('tbodyContactosAll').innerHTML = contactosFiltrados.map(c => `
     <tr>
       <td><strong>${c.nombre}</strong></td>
       <td>${c.grupo}</td>
@@ -949,7 +969,10 @@ function renderizar() {
       <td>${c.email}</td>
       <td><strong>${c.tipo}</strong></td>
       <td><span class="badge ${getBadgeClass(c.estado)}">${c.estado}</span></td>
-      <td><button class="btn btn-sm btn-secondary" onclick="eliminarContacto('${c.id}')">Eliminar</button></td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="editarContacto('${c.id}')">Editar</button>
+        <button class="btn btn-sm btn-secondary" onclick="eliminarContacto('${c.id}')">Eliminar</button>
+      </td>
     </tr>
   `).join('');
 
@@ -1076,10 +1099,9 @@ function formatFecha(fecha) {
 }
 
 function eliminarContacto(id) {
-  if (confirm('¿Eliminar?')) {
+  if (confirm('¿Estás seguro de que deseas eliminar este contacto?')) {
     data.contactos = data.contactos.filter(c => c.id !== id);
     guardarEnLocalStorage();
-    syncWithSheets();
     renderizar();
     showToast('✓ Contacto eliminado');
   }
@@ -1161,6 +1183,89 @@ function saveConfig() {
 
 function testConnection() {
   cargarContactosDelSheet();
+}
+
+// ===== BÚSQUEDA =====
+function buscarContacto(valor) {
+  busquedaActual = valor;
+  renderizar();
+}
+
+// ===== EDITAR =====
+function editarContacto(id) {
+  const contacto = data.contactos.find(c => c.id === id);
+  if (!contacto) return;
+  
+  contactoEditando = { ...contacto };
+  
+  // Llenar el formulario modal
+  document.getElementById('c-nombre').value = contacto.nombre;
+  document.getElementById('c-grupo').value = contacto.grupo;
+  document.getElementById('c-email').value = contacto.email;
+  document.getElementById('c-telefono').value = contacto.telefono;
+  document.getElementById('c-cargo').value = contacto.cargo;
+  document.getElementById('c-tipo').value = contacto.tipo;
+  document.getElementById('c-estado').value = contacto.estado;
+  document.getElementById('c-notas').value = contacto.notas;
+  
+  // Cambiar botón a "Actualizar"
+  const btnGuardar = document.querySelector('#modal-contacto .btn-primary');
+  btnGuardar.textContent = 'Actualizar';
+  btnGuardar.onclick = () => actualizarContacto();
+  
+  // Abrir modal
+  openModal('modal-contacto');
+}
+
+function actualizarContacto() {
+  if (!contactoEditando) return;
+  
+  contactoEditando.nombre = document.getElementById('c-nombre').value;
+  contactoEditando.grupo = document.getElementById('c-grupo').value;
+  contactoEditando.email = document.getElementById('c-email').value;
+  contactoEditando.telefono = document.getElementById('c-telefono').value;
+  contactoEditando.cargo = document.getElementById('c-cargo').value;
+  contactoEditando.tipo = document.getElementById('c-tipo').value;
+  contactoEditando.estado = document.getElementById('c-estado').value;
+  contactoEditando.notas = document.getElementById('c-notas').value;
+  
+  // Actualizar en el array
+  const indice = data.contactos.findIndex(c => c.id === contactoEditando.id);
+  if (indice !== -1) {
+    data.contactos[indice] = contactoEditando;
+  }
+  
+  guardarEnLocalStorage();
+  
+  // Guardar en Sheet
+  if (config.scriptUrl) {
+    fetch(config.scriptUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ type: 'contacto', contacto: contactoEditando })
+    }).catch(err => console.log('Actualizado localmente'));
+  }
+  
+  renderizar();
+  closeModal('modal-contacto');
+  document.getElementById('modal-contacto').querySelector('form').reset();
+  
+  // Restaurar botón
+  const btnGuardar = document.querySelector('#modal-contacto .btn-primary');
+  btnGuardar.textContent = 'Guardar';
+  btnGuardar.onclick = (e) => guardarContacto(e);
+  
+  contactoEditando = null;
+  showToast('✓ Contacto actualizado');
+}
+
+function openModal(id) {
+  document.getElementById(id).style.display = 'flex';
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
 }
 </script>
 </body>
