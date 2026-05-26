@@ -354,7 +354,7 @@ textarea{min-height:100px;resize:vertical}
 
       <div class="section-hd">
         <h2 class="section-title">Próximas Reuniones</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-reunion')">+ Agendar</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalReunion()">+ Agendar</button>
       </div>
       <div class="table-wrap">
         <table id="tablaReuniones">
@@ -417,7 +417,7 @@ textarea{min-height:100px;resize:vertical}
     <div class="page" id="page-reuniones">
       <div class="section-hd">
         <h2 class="section-title">Reuniones</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-reunion')">+ Agendar</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalReunion()">+ Agendar</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -590,7 +590,17 @@ textarea{min-height:100px;resize:vertical}
     <form onsubmit="guardarReunion(event)">
       <div class="form-group">
         <label>Contacto</label>
-        <select id="r-contacto" required></select>
+        <input type="text" id="r-contacto-search" placeholder="Busca por nombre..." 
+               onkeyup="buscarContactoReunion(this.value)" autocomplete="off">
+        <div id="r-contacto-lista" style="
+          border: 1px solid #ddd;
+          border-top: none;
+          max-height: 200px;
+          overflow-y: auto;
+          display: none;
+          background: white;
+        "></div>
+        <input type="hidden" id="r-contacto" required>
       </div>
       <div class="form-group">
         <label>Fecha y Hora</label>
@@ -654,7 +664,7 @@ textarea{min-height:100px;resize:vertical}
 const config = {
   sheetId: localStorage.getItem('sheetId') || '1CT1l8oJm5d-1VKoZGSHKh0q1vzaD4b1WWZSUuzwxwAQ',
   scriptUrl: localStorage.getItem('scriptUrl') || '',
-  syncInterval: 5000
+  syncInterval: 30000
 };
 
 let data = {
@@ -1036,8 +1046,8 @@ function renderizarFondos() {
 }
 
 function actualizarSelectores() {
+  // Para inversiones mantener select normal
   const opts = data.contactos.map(c => `<option value="${c.id}">${c.nombre} (${c.grupo})</option>`).join('');
-  document.getElementById('r-contacto').innerHTML = '<option value="">-- Seleccionar --</option>' + opts;
   document.getElementById('inv-contacto').innerHTML = '<option value="">-- Seleccionar --</option>' + opts;
 }
 
@@ -1185,11 +1195,50 @@ function testConnection() {
   cargarContactosDelSheet();
 }
 
-// ===== BÚSQUEDA =====
-function buscarContacto(valor) {
-  busquedaActual = valor;
-  renderizar();
+function abrirModalReunion() {
+  document.getElementById('r-contacto-search').value = '';
+  document.getElementById('r-contacto').value = '';
+  document.getElementById('r-contacto-lista').innerHTML = '';
+  document.getElementById('r-contacto-lista').style.display = 'none';
+  openModal('modal-reunion');
 }
+
+// ===== BÚSQUEDA PREDICTIVA REUNIÓN =====
+function buscarContactoReunion(valor) {
+  const lista = document.getElementById('r-contacto-lista');
+  
+  if (!valor) {
+    lista.style.display = 'none';
+    return;
+  }
+  
+  const filtrados = data.contactos.filter(c => 
+    c.nombre.toLowerCase().includes(valor.toLowerCase()) ||
+    c.grupo.toLowerCase().includes(valor.toLowerCase())
+  );
+  
+  if (filtrados.length === 0) {
+    lista.innerHTML = '<div style="padding: 10px; color: #999;">No hay resultados</div>';
+    lista.style.display = 'block';
+    return;
+  }
+  
+  lista.innerHTML = filtrados.map(c => `
+    <div onclick="seleccionarContactoReunion('${c.id}', '${c.nombre}')" 
+         style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; hover: background: #f5f5f5;">
+      <strong>${c.nombre}</strong> - ${c.grupo} (${c.tipo})
+    </div>
+  `).join('');
+  
+  lista.style.display = 'block';
+}
+
+function seleccionarContactoReunion(id, nombre) {
+  document.getElementById('r-contacto-search').value = nombre;
+  document.getElementById('r-contacto').value = id;
+  document.getElementById('r-contacto-lista').style.display = 'none';
+}
+
 
 // ===== EDITAR =====
 function editarContacto(id) {
@@ -1260,13 +1309,6 @@ function actualizarContacto() {
   showToast('✓ Contacto actualizado');
 }
 
-function openModal(id) {
-  document.getElementById(id).style.display = 'flex';
-}
-
-function closeModal(id) {
-  document.getElementById(id).style.display = 'none';
-}
 </script>
 </body>
 </html>
