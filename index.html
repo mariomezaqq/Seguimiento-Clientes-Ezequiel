@@ -833,6 +833,14 @@ async function syncWithSheets() {
 // ===== GUARDAR DATOS =====
 function guardarContacto(e) {
   e.preventDefault();
+  
+  // Si estamos editando
+  if (contactoEditando) {
+    actualizarContacto();
+    return;
+  }
+  
+  // Si estamos creando nuevo
   const contacto = {
     id: Date.now().toString(),
     nombre: document.getElementById('c-nombre').value,
@@ -861,6 +869,8 @@ function guardarContacto(e) {
   renderizar();
   closeModal('modal-contacto');
   document.getElementById('modal-contacto').querySelector('form').reset();
+  document.querySelector('#modal-contacto .modal-header').textContent = 'Nuevo Contacto';
+  contactoEditando = null;
   showToast('✓ Contacto guardado');
 }
 
@@ -1243,8 +1253,12 @@ function seleccionarContactoReunion(id, nombre) {
 // ===== EDITAR =====
 function editarContacto(id) {
   const contacto = data.contactos.find(c => c.id === id);
-  if (!contacto) return;
+  if (!contacto) {
+    console.error('Contacto no encontrado:', id);
+    return;
+  }
   
+  console.log('Editando contacto:', contacto);
   contactoEditando = { ...contacto };
   
   // Llenar el formulario modal
@@ -1255,14 +1269,13 @@ function editarContacto(id) {
   document.getElementById('c-cargo').value = contacto.cargo;
   document.getElementById('c-tipo').value = contacto.tipo;
   document.getElementById('c-estado').value = contacto.estado;
-  document.getElementById('c-notas').value = contacto.notas;
+  document.getElementById('c-notas').value = contacto.notas || '';
   
-  // Cambiar botón a "Actualizar"
-  const btnGuardar = document.querySelector('#modal-contacto .btn-primary');
-  btnGuardar.textContent = 'Actualizar';
-  btnGuardar.onclick = () => actualizarContacto();
+  // Cambiar el modal header
+  document.querySelector('#modal-contacto .modal-header').textContent = 'Editar Contacto: ' + contacto.nombre;
   
   // Abrir modal
+  console.log('Abriendo modal...');
   openModal('modal-contacto');
 }
 
@@ -1299,11 +1312,7 @@ function actualizarContacto() {
   renderizar();
   closeModal('modal-contacto');
   document.getElementById('modal-contacto').querySelector('form').reset();
-  
-  // Restaurar botón
-  const btnGuardar = document.querySelector('#modal-contacto .btn-primary');
-  btnGuardar.textContent = 'Guardar';
-  btnGuardar.onclick = (e) => guardarContacto(e);
+  document.querySelector('#modal-contacto .modal-header').textContent = 'Nuevo Contacto';
   
   contactoEditando = null;
   showToast('✓ Contacto actualizado');
