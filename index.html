@@ -357,23 +357,10 @@ textarea{min-height:100px;resize:vertical}
       </div>
 
       <div class="section-hd">
-        <h2 class="section-title">Próximas Reuniones</h2>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalReunion()">+ Agendar</button>
+        <h2 class="section-title">🔴 Reuniones Más Urgentes</h2>
+        <button class="btn btn-primary btn-sm" onclick="openPage('reuniones'); document.querySelectorAll('.nav-item')[2].click()">Ver todas</button>
       </div>
-      <div class="table-wrap">
-        <table id="tablaReuniones">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Contacto</th>
-              <th>Producto</th>
-              <th>Próximo Paso</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyReuniones"></tbody>
-        </table>
-      </div>
+      <div id="dashboardReunionesUrgentes"></div>
     </div>
 
     <!-- PAGE: CONTACTOS -->
@@ -420,24 +407,27 @@ textarea{min-height:100px;resize:vertical}
     <!-- PAGE: REUNIONES -->
     <div class="page" id="page-reuniones">
       <div class="section-hd">
-        <h2 class="section-title">Reuniones</h2>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalReunion()">+ Agendar</button>
+        <h2 class="section-title">📋 Historial de Reuniones & Seguimiento</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalReunion()">+ Agendar Reunión</button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Contacto</th>
-              <th>Empresa</th>
-              <th>Producto</th>
-              <th>Próximo Paso</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyReunionesAll"></tbody>
-        </table>
+
+      <div style="margin-bottom:20px">
+        <input type="text" placeholder="🔍 Filtrar por contacto..." 
+               onkeyup="filtrarReuniones(this.value)" 
+               style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-family:inherit">
       </div>
+
+      <h3 style="margin:30px 0 15px 0;color:#c0392b;font-weight:600">🔴 URGENTE - Hace 60+ días</h3>
+      <div id="reunionesUrgentes"></div>
+
+      <h3 style="margin:30px 0 15px 0;color:#e67e22;font-weight:600">🟠 IMPORTANTE - Hace 30-60 días</h3>
+      <div id="reunionesImportantes"></div>
+
+      <h3 style="margin:30px 0 15px 0;color:#f39c12;font-weight:600">💛 SEGUIMIENTO - Hace 7-30 días</h3>
+      <div id="reunionesSeguimiento"></div>
+
+      <h3 style="margin:30px 0 15px 0;color:#27ae60;font-weight:600">🟢 RECIENTE - Últimos 7 días</h3>
+      <div id="reunionesRecientes"></div>
     </div>
 
     <!-- PAGE: FOLLOW-UP -->
@@ -1009,10 +999,13 @@ function guardarInversion(e) {
 // ===== RENDERIZAR =====
 function renderizar() {
   const contactosRecientes = data.contactos.slice(-5);
-  const reunionesProximas = [...data.reuniones].sort((a,b) => new Date(a.fecha) - new Date(b.fecha)).filter(r => new Date(r.fecha) > new Date()).slice(0, 5);
+  
+  // Reuniones más urgentes (ordenadas por antigüedad descendente)
+  const reunionesOrdenadasAntiguedad = [...data.reuniones].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  const reunionesUrgentes = reunionesOrdenadasAntiguedad.slice(0, 3); // Top 3 más antiguas
   
   document.getElementById('kpiContactos').textContent = data.contactos.length;
-  document.getElementById('kpiReuniones').textContent = reunionesProximas.length;
+  document.getElementById('kpiReuniones').textContent = data.reuniones.length;
   document.getElementById('kpiCalientes').textContent = data.contactos.filter(c => c.estado === 'Caliente').length;
   document.getElementById('kpiInversiones').textContent = data.inversiones.length;
 
@@ -1030,15 +1023,47 @@ function renderizar() {
     </tr>
   `).join('');
 
-  document.getElementById('tbodyReuniones').innerHTML = reunionesProximas.map(r => `
-    <tr>
-      <td>${formatFecha(r.fecha)}</td>
-      <td>${r.contacto}</td>
-      <td>${r.producto}</td>
-      <td>${r.proximo}</td>
-      <td><button class="btn btn-sm btn-secondary" onclick="eliminarReunion('${r.id}')">Eliminar</button></td>
-    </tr>
-  `).join('');
+  // Renderizar reuniones urgentes en dashboard
+  document.getElementById('dashboardReunionesUrgentes').innerHTML = reunionesUrgentes.length === 0
+    ? '<div style="background:#f9f9f9;padding:20px;text-align:center;border-radius:8px;color:#999">Sin reuniones registradas</div>'
+    : reunionesUrgentes.map(r => {
+        const dias = Math.floor((Date.now() - new Date(r.fecha)) / (1000*60*60*24));
+        let bgColor = '#e8f5e9', borderColor = '#27ae60', icon = '🟢';
+        
+        if (dias >= 60) {
+          bgColor = '#ffebee';
+          borderColor = '#c0392b';
+          icon = '🔴';
+        } else if (dias >= 30) {
+          bgColor = '#fff3e0';
+          borderColor = '#e67e22';
+          icon = '🟠';
+        } else if (dias >= 7) {
+          bgColor = '#fffde7';
+          borderColor = '#f39c12';
+          icon = '💛';
+        }
+        
+        return `
+          <div style="
+            background:${bgColor};
+            border-left:4px solid ${borderColor};
+            padding:12px;
+            margin-bottom:8px;
+            border-radius:4px;
+            font-size:12px
+          ">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div>
+                <div style="font-weight:600">${icon} ${r.contacto}</div>
+                <div style="color:#666;margin-top:2px">${r.empresa} • Producto: ${r.producto}</div>
+                <div style="color:#999;font-size:11px;margin-top:2px">Hace ${dias} días</div>
+              </div>
+              <button class="btn btn-sm btn-secondary" onclick="openPage('reuniones'); document.querySelectorAll('.nav-item')[2].click()">Ver</button>
+            </div>
+          </div>
+        `;
+      }).join('');
 
   // Contactos completo (con búsqueda Y filtro de tipo)
   let contactosFiltrados = data.contactos.filter(c => {
@@ -1069,17 +1094,10 @@ function renderizar() {
     </tr>
   `).join('');
 
-  // Reuniones completo
-  document.getElementById('tbodyReunionesAll').innerHTML = data.reuniones.map(r => `
-    <tr>
-      <td>${formatFecha(r.fecha)}</td>
-      <td>${r.contacto}</td>
-      <td>${r.empresa}</td>
-      <td>${r.producto}</td>
-      <td>${r.proximo}</td>
-      <td><button class="btn btn-sm btn-secondary" onclick="eliminarReunion('${r.id}')">Eliminar</button></td>
-    </tr>
-  `).join('');
+  // Reuniones completo - NUEVA VERSIÓN CON URGENCIA
+  if (document.getElementById('reunionesUrgentes')) {
+    renderReunionesConUrgencia();
+  }
 
   // Inversiones
   document.getElementById('tbodyInversiones').innerHTML = data.inversiones.map(inv => `
@@ -1177,6 +1195,132 @@ function renderFollowUp() {
       <div style="font-size:11px;color:#1e7e34;margin-top:6px;font-style:italic">✓ ${c.reunion.outcome}</div>
     </div>
   `).join('');
+}
+
+// ===== RENDERIZAR REUNIONES CON URGENCIA =====
+let filtroReuniones = '';
+
+function renderReunionesConUrgencia() {
+  const urgentes = [];
+  const importantes = [];
+  const seguimiento = [];
+  const recientes = [];
+  
+  // Ordenar por fecha descendente (más reciente primero)
+  const reunionesOrdenadas = [...data.reuniones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  
+  reunionesOrdenadas.forEach(r => {
+    // Filtro de búsqueda
+    if (filtroReuniones && !r.contacto.toLowerCase().includes(filtroReuniones.toLowerCase())) {
+      return;
+    }
+    
+    const dias = Math.floor((Date.now() - new Date(r.fecha)) / (1000*60*60*24));
+    
+    if (dias >= 60) {
+      urgentes.push({ ...r, dias });
+    } else if (dias >= 30) {
+      importantes.push({ ...r, dias });
+    } else if (dias >= 7) {
+      seguimiento.push({ ...r, dias });
+    } else {
+      recientes.push({ ...r, dias });
+    }
+  });
+  
+  // Renderizar URGENTES
+  document.getElementById('reunionesUrgentes').innerHTML = urgentes.length === 0
+    ? '<div style="color:#999;padding:20px;text-align:center">Sin reuniones urgentes</div>'
+    : urgentes.map(r => renderCardReunion(r, 'urgente')).join('');
+  
+  // Renderizar IMPORTANTES
+  document.getElementById('reunionesImportantes').innerHTML = importantes.length === 0
+    ? '<div style="color:#999;padding:20px;text-align:center">Sin reuniones importantes</div>'
+    : importantes.map(r => renderCardReunion(r, 'importante')).join('');
+  
+  // Renderizar SEGUIMIENTO
+  document.getElementById('reunionesSeguimiento').innerHTML = seguimiento.length === 0
+    ? '<div style="color:#999;padding:20px;text-align:center">Sin reuniones en seguimiento</div>'
+    : seguimiento.map(r => renderCardReunion(r, 'seguimiento')).join('');
+  
+  // Renderizar RECIENTES
+  document.getElementById('reunionesRecientes').innerHTML = recientes.length === 0
+    ? '<div style="color:#999;padding:20px;text-align:center">Sin reuniones recientes</div>'
+    : recientes.map(r => renderCardReunion(r, 'reciente')).join('');
+}
+
+function renderCardReunion(r, tipo) {
+  let bgColor, borderColor, textColor;
+  
+  switch(tipo) {
+    case 'urgente':
+      bgColor = '#ffebee';
+      borderColor = '#c0392b';
+      textColor = '#a02622';
+      break;
+    case 'importante':
+      bgColor = '#fff3e0';
+      borderColor = '#e67e22';
+      textColor = '#d35400';
+      break;
+    case 'seguimiento':
+      bgColor = '#fffde7';
+      borderColor = '#f39c12';
+      textColor = '#d68910';
+      break;
+    case 'reciente':
+      bgColor = '#e8f5e9';
+      borderColor = '#27ae60';
+      textColor = '#1e7e34';
+      break;
+  }
+  
+  return `
+    <div style="
+      background:${bgColor};
+      border-left:4px solid ${borderColor};
+      padding:16px;
+      margin-bottom:12px;
+      border-radius:4px;
+      color:${textColor}
+    ">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px">${r.contacto}</div>
+          <div style="font-size:12px;margin-top:4px">${r.empresa}</div>
+          <div style="font-size:11px;color:#666;margin-top:2px">${formatFecha(r.fecha)} (Hace ${r.dias} días)</div>
+        </div>
+        <div style="text-align:right;font-size:12px;font-weight:600">
+          ${r.dias < 30 ? '●' : ''} ${r.dias < 60 ? '●' : '●●●'}
+        </div>
+      </div>
+      
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.1)">
+        <div style="font-size:11px;text-transform:uppercase;font-weight:600;color:${textColor}">Producto</div>
+        <div style="font-size:13px;font-weight:500;margin-top:2px">${r.producto}</div>
+      </div>
+      
+      <div style="margin-top:10px">
+        <div style="font-size:11px;text-transform:uppercase;font-weight:600;color:${textColor}">Outcome</div>
+        <div style="font-size:13px;margin-top:2px;font-style:italic">"${r.descripcion || '-'}"</div>
+      </div>
+      
+      <div style="margin-top:10px">
+        <div style="font-size:11px;text-transform:uppercase;font-weight:600;color:${textColor}">Próximo Paso</div>
+        <div style="font-size:13px;margin-top:2px;font-weight:500">📌 ${r.proximo || 'Sin definir'}</div>
+      </div>
+      
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-sm btn-secondary" onclick="abrirModalReunion()">Actualizar</button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarReunion('${r.id}')">Eliminar</button>
+      </div>
+    </div>
+  `;
+}
+
+function filtrarReuniones(valor) {
+  filtroReuniones = valor;
+  renderReunionesConUrgencia();
 }
 
 // ===== RENDERIZAR FONDOS =====
