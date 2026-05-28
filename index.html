@@ -727,53 +727,80 @@ async function cargarContactosDelSheet() {
     
     if (!config.scriptUrl) {
       console.log('Sin URL de Apps Script, usando API de Google Sheets');
+      console.log('Sheet ID:', config.sheetId);
+      
       // Usar API como fallback
       const apiKey = 'AIzaSyAm4lQGz5k_tVzKBLQvgWOlUyWm6I7TyF4';
       const ranges = ['Contactos!A:H', 'Reuniones!A:G', 'Inversiones!A:E'];
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${apiKey}&ranges=${ranges.join(',')}&includeGridData=true`;
       
+      console.log('URL de la API:', url);
+      
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Error cargando del Sheet');
+      if (!response.ok) throw new Error('Error cargando del Sheet: ' + response.status);
       
       const result = await response.json();
       procesarDatosSheet(result);
     } else {
       // Usar Google Apps Script
       console.log('Cargando datos del Apps Script:', config.scriptUrl);
-      const response = await fetch(config.scriptUrl, {
-        method: 'GET',
-        mode: 'cors'
-      });
       
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // COMBINAR datos: mantener locales + agregar nuevos del Sheet
-        const contactosSheet = result.contactos || [];
-        const reunionesSheet = result.reuniones || [];
-        const inversionesSheet = result.inversiones || [];
+      try {
+        const response = await fetch(config.scriptUrl, {
+          method: 'GET',
+          mode: 'cors'
+        });
         
-        // Contactos: mantener los locales (sin ID del Sheet) y agregar los del Sheet
-        const contactosLocales = data.contactos.filter(c => c.id.length > 13); // IDs locales son timestamps largos
-        const contactosDelSheet = contactosSheet.filter(c => !contactosLocales.some(local => local.email === c.email));
-        data.contactos = [...contactosLocales, ...contactosDelSheet];
+        console.log('Respuesta HTTP:', response.status, response.statusText);
         
-        // Reuniones: igual
-        const reunionesLocales = data.reuniones.filter(r => r.id.length > 13);
-        const reunionesDelSheet = reunionesSheet.filter(r => !reunionesLocales.some(local => local.contacto === r.contacto && local.fecha === r.fecha));
-        data.reuniones = [...reunionesLocales, ...reunionesDelSheet];
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         
-        // Inversiones: igual
-        const inversionesLocales = data.inversiones.filter(i => i.id.length > 13);
-        const inversionesDelSheet = inversionesSheet.filter(i => !inversionesLocales.some(local => local.contacto === i.contacto && local.fondo === i.fondo));
-        data.inversiones = [...inversionesLocales, ...inversionesDelSheet];
+        const result = await response.json();
+        console.log('Resultado del Apps Script:', result);
         
-        renderizar();
-        guardarEnLocalStorage();
-      } else {
-        throw new Error(result.error || 'Error del servidor');
+        if (result.success) {
+          // COMBINAR datos: mantener locales + agregar nuevos del Sheet
+          const contactosSheet = result.contactos || [];
+          const reunionesSheet = result.reuniones || [];
+          const inversionesSheet = result.inversiones || [];
+          
+          console.log('Contactos del Sheet:', contactosSheet.length);
+          console.log('Contactos locales:', data.contactos.length);
+          
+          // Contactos: mantener los locales (sin ID del Sheet) y agregar los del Sheet
+          const contactosLocales = data.contactos.filter(c => c.id.length > 13); // IDs locales son timestamps largos
+          const contactosDelSheet = contactosSheet.filter(c => !contactosLocales.some(local => local.email === c.email));
+          data.contactos = [...contactosLocales, ...contactosDelSheet];
+          
+          // Reuniones: igual
+          const reunionesLocales = data.reuniones.filter(r => r.id.length > 13);
+          const reunionesDelSheet = reunionesSheet.filter(r => !reunionesLocales.some(local => local.contacto === r.contacto && local.fecha === r.fecha));
+          data.reuniones = [...reunionesLocales, ...reunionesDelSheet];
+          
+          // Inversiones: igual
+          const inversionesLocales = data.inversiones.filter(i => i.id.length > 13);
+          const inversionesDelSheet = inversionesSheet.filter(i => !inversionesLocales.some(local => local.contacto === i.contacto && local.fondo === i.fondo));
+          data.inversiones = [...inversionesLocales, ...inversionesDelSheet];
+          
+          renderizar();
+          guardarEnLocalStorage();
+        } else {
+          throw new Error(result.error || 'Error del servidor');
+        }
+      } catch (scriptError) {
+        console.warn('Fallo Apps Script, intentando con API de Google Sheets:', scriptError);
+        // Intentar con API como fallback
+        const apiKey = 'AIzaSyAm4lQGz5k_tVzKBLQvgWOlUyWm6I7TyF4';
+        const ranges = ['Contactos!A:H', 'Reuniones!A:G', 'Inversiones!A:E'];
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${apiKey}&ranges=${ranges.join(',')}&includeGridData=true`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Error cargando del Sheet: ' + response.status);
+        
+        const result = await response.json();
+        procesarDatosSheet(result);
       }
     }
     
@@ -781,9 +808,10 @@ async function cargarContactosDelSheet() {
     showToast('✓ Sincronizado');
     
   } catch (error) {
-    console.error('Error al cargar:', error);
+    console.error('Error completo al cargar:', error);
     updateSyncStatus(false);
-    showToast('❌ Error: ' + error.message);
+    showToast('⚠️ Sin conexión (usando datos locales)');
+    // No mostrar error si es solo que no hay conexión, usar datos locales
   }
 }
 
@@ -1373,13 +1401,22 @@ function seleccionarContactoReunion(id, nombre) {
 
 // ===== EDITAR =====
 function editarContacto(id) {
-  const contacto = data.contactos.find(c => c.id === id);
+  console.log('Buscando contacto con ID:', id);
+  console.log('Total contactos en data:', data.contactos.length);
+  console.log('IDs disponibles:', data.contactos.map(c => c.id));
+  
+  const contacto = data.contactos.find(c => {
+    console.log('Comparando:', c.id, '===', id, '=', c.id === id);
+    return c.id === id;
+  });
+  
   if (!contacto) {
-    console.error('Contacto no encontrado:', id);
+    console.error('Contacto no encontrado con ID:', id);
+    showToast('❌ Error: Contacto no encontrado');
     return;
   }
   
-  console.log('Editando contacto:', contacto);
+  console.log('✓ Contacto encontrado:', contacto);
   contactoEditando = { ...contacto };
   
   // Llenar el formulario modal
@@ -1396,7 +1433,6 @@ function editarContacto(id) {
   document.querySelector('#modal-contacto .modal-header').textContent = 'Editar Contacto: ' + contacto.nombre;
   
   // Abrir modal
-  console.log('Abriendo modal...');
   openModal('modal-contacto');
 }
 
