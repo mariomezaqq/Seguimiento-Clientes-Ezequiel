@@ -1269,28 +1269,107 @@ function formatFecha(fecha) {
 
 function eliminarContacto(id) {
   if (confirm('¿Estás seguro de que deseas eliminar este contacto?')) {
+    console.log('Eliminando contacto con ID:', id);
+    console.log('Contactos antes:', data.contactos.length);
+    
+    const contactoAEliminar = data.contactos.find(c => c.id === id);
+    if (!contactoAEliminar) {
+      console.error('Contacto no encontrado:', id);
+      showToast('❌ Error: Contacto no encontrado');
+      return;
+    }
+    
+    // Eliminar del array
     data.contactos = data.contactos.filter(c => c.id !== id);
+    console.log('Contactos después:', data.contactos.length);
+    
+    // Guardar en localStorage
     guardarEnLocalStorage();
+    
+    // Sincronizar eliminación con Sheet si hay Apps Script
+    if (config.scriptUrl) {
+      fetch(config.scriptUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ 
+          type: 'eliminar', 
+          entity: 'contacto', 
+          id: id,
+          contacto: contactoAEliminar 
+        })
+      }).catch(err => console.log('Se eliminó localmente'));
+    }
+    
+    // Re-renderizar
     renderizar();
     showToast('✓ Contacto eliminado');
   }
 }
 
 function eliminarReunion(id) {
-  if (confirm('¿Eliminar?')) {
+  if (confirm('¿Eliminar esta reunión?')) {
+    console.log('Eliminando reunión con ID:', id);
+    
+    const reunionAEliminar = data.reuniones.find(r => r.id === id);
+    if (!reunionAEliminar) {
+      console.error('Reunión no encontrada:', id);
+      showToast('❌ Error: Reunión no encontrada');
+      return;
+    }
+    
     data.reuniones = data.reuniones.filter(r => r.id !== id);
     guardarEnLocalStorage();
-    syncWithSheets();
+    
+    // Sincronizar eliminación
+    if (config.scriptUrl) {
+      fetch(config.scriptUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ 
+          type: 'eliminar', 
+          entity: 'reunion', 
+          id: id,
+          reunion: reunionAEliminar 
+        })
+      }).catch(err => console.log('Se eliminó localmente'));
+    }
+    
     renderizar();
     showToast('✓ Reunión eliminada');
   }
 }
 
 function eliminarInversion(id) {
-  if (confirm('¿Eliminar?')) {
+  if (confirm('¿Eliminar esta inversión?')) {
+    console.log('Eliminando inversión con ID:', id);
+    
+    const inversionAEliminar = data.inversiones.find(i => i.id === id);
+    if (!inversionAEliminar) {
+      console.error('Inversión no encontrada:', id);
+      showToast('❌ Error: Inversión no encontrada');
+      return;
+    }
+    
     data.inversiones = data.inversiones.filter(i => i.id !== id);
     guardarEnLocalStorage();
-    syncWithSheets();
+    
+    // Sincronizar eliminación
+    if (config.scriptUrl) {
+      fetch(config.scriptUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ 
+          type: 'eliminar', 
+          entity: 'inversion', 
+          id: id,
+          inversion: inversionAEliminar 
+        })
+      }).catch(err => console.log('Se eliminó localmente'));
+    }
+    
     renderizar();
     showToast('✓ Inversión eliminada');
   }
