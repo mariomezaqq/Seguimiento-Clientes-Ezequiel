@@ -278,6 +278,10 @@ textarea{min-height:100px;resize:vertical}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>Reuniones</span>
       </div>
+      <div class="nav-item" data-page="followup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        <span>Follow-up</span>
+      </div>
       <div class="nav-item" data-page="inversiones">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         <span>Inversiones</span>
@@ -434,6 +438,25 @@ textarea{min-height:100px;resize:vertical}
           <tbody id="tbodyReunionesAll"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- PAGE: FOLLOW-UP -->
+    <div class="page" id="page-followup">
+      <div class="section-hd">
+        <h2 class="section-title">🎯 Follow-up Inteligente</h2>
+      </div>
+
+      <h3 style="margin-top:30px;margin-bottom:16px;color:#c0392b;font-weight:600">🔴 URGENTE - Sin contacto 60+ días</h3>
+      <div id="followupUrgente"></div>
+
+      <h3 style="margin-top:30px;margin-bottom:16px;color:#e67e22;font-weight:600">🟠 IMPORTANTE - Sin contacto 30+ días</h3>
+      <div id="followupImportante"></div>
+
+      <h3 style="margin-top:30px;margin-bottom:16px;color:#f39c12;font-weight:600">💛 ACCIÓN - Reuniones pendientes</h3>
+      <div id="followupAccion"></div>
+
+      <h3 style="margin-top:30px;margin-bottom:16px;color:#27ae60;font-weight:600">🟢 SEGUIMIENTO - En proceso</h3>
+      <div id="followupOk"></div>
     </div>
 
     <!-- PAGE: INVERSIONES -->
@@ -727,9 +750,26 @@ async function cargarContactosDelSheet() {
       const result = await response.json();
       
       if (result.success) {
-        data.contactos = result.contactos || [];
-        data.reuniones = result.reuniones || [];
-        data.inversiones = result.inversiones || [];
+        // COMBINAR datos: mantener locales + agregar nuevos del Sheet
+        const contactosSheet = result.contactos || [];
+        const reunionesSheet = result.reuniones || [];
+        const inversionesSheet = result.inversiones || [];
+        
+        // Contactos: mantener los locales (sin ID del Sheet) y agregar los del Sheet
+        const contactosLocales = data.contactos.filter(c => c.id.length > 13); // IDs locales son timestamps largos
+        const contactosDelSheet = contactosSheet.filter(c => !contactosLocales.some(local => local.email === c.email));
+        data.contactos = [...contactosLocales, ...contactosDelSheet];
+        
+        // Reuniones: igual
+        const reunionesLocales = data.reuniones.filter(r => r.id.length > 13);
+        const reunionesDelSheet = reunionesSheet.filter(r => !reunionesLocales.some(local => local.contacto === r.contacto && local.fecha === r.fecha));
+        data.reuniones = [...reunionesLocales, ...reunionesDelSheet];
+        
+        // Inversiones: igual
+        const inversionesLocales = data.inversiones.filter(i => i.id.length > 13);
+        const inversionesDelSheet = inversionesSheet.filter(i => !inversionesLocales.some(local => local.contacto === i.contacto && local.fondo === i.fondo));
+        data.inversiones = [...inversionesLocales, ...inversionesDelSheet];
+        
         renderizar();
         guardarEnLocalStorage();
       } else {
@@ -1028,6 +1068,87 @@ function renderizar() {
   renderizarFondos();
 
   actualizarSelectores();
+  
+  // Renderizar follow-up si está activa
+  const pageFollowup = document.getElementById('page-followup');
+  if (pageFollowup && pageFollowup.classList.contains('active')) {
+    renderFollowUp();
+  }
+}
+
+// ===== FOLLOW-UP INTELIGENTE =====
+function renderFollowUp() {
+  const urgentes = [];
+  const importantes = [];
+  const acciones = [];
+  const ok = [];
+  
+  data.contactos.forEach(c => {
+    const reunion = data.reuniones
+      .filter(r => r.contacto === c.nombre)
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
+    
+    if (!reunion) {
+      urgentes.push({ ...c, dias: '∞', reunion: null });
+      return;
+    }
+    
+    const dias = Math.floor((Date.now() - new Date(reunion.fecha)) / (1000*60*60*24));
+    
+    if (dias >= 60) {
+      urgentes.push({ ...c, dias, reunion });
+    } else if (dias >= 30) {
+      importantes.push({ ...c, dias, reunion });
+    } else if (reunion.proximo !== '') {
+      acciones.push({ ...c, dias, reunion });
+    } else {
+      ok.push({ ...c, dias, reunion });
+    }
+  });
+  
+  document.getElementById('followupUrgente').innerHTML = urgentes.map(c => `
+    <div style="background:#ffebee;border-left:4px solid #c0392b;padding:16px;margin-bottom:12px;border-radius:4px">
+      <div style="font-weight:600;color:#c0392b">${c.nombre} (${c.grupo})</div>
+      <div style="font-size:12px;color:#a02622;margin-top:4px">
+        ${c.dias === '∞' ? 'NUNCA contactado' : 'Hace ' + c.dias + ' días'}
+        ${c.reunion ? ' - ' + c.reunion.outcome : ''}
+      </div>
+      ${c.reunion ? `<div style="font-size:11px;color:#a02622;margin-top:6px;font-style:italic">Acción: ${c.reunion.proximo}</div>` : ''}
+      <button class="btn btn-sm btn-secondary" onclick="openModal('modal-reunion')" style="margin-top:8px">Agendar reunión</button>
+    </div>
+  `).join('');
+  
+  document.getElementById('followupImportante').innerHTML = importantes.map(c => `
+    <div style="background:#fff3e0;border-left:4px solid #e67e22;padding:16px;margin-bottom:12px;border-radius:4px">
+      <div style="font-weight:600;color:#e67e22">${c.nombre} (${c.grupo})</div>
+      <div style="font-size:12px;color:#d35400;margin-top:4px">
+        Hace ${c.dias} días - ${c.reunion.outcome}
+      </div>
+      <div style="font-size:11px;color:#d35400;margin-top:6px;font-style:italic">Acción: ${c.reunion.proximo}</div>
+      <button class="btn btn-sm btn-secondary" onclick="openModal('modal-reunion')" style="margin-top:8px">Seguimiento</button>
+    </div>
+  `).join('');
+  
+  document.getElementById('followupAccion').innerHTML = acciones.map(c => `
+    <div style="background:#fffde7;border-left:4px solid #f39c12;padding:16px;margin-bottom:12px;border-radius:4px">
+      <div style="font-weight:600;color:#f39c12">${c.nombre} (${c.grupo})</div>
+      <div style="font-size:12px;color:#d68910;margin-top:4px">
+        Reunión hace ${c.dias} días
+      </div>
+      <div style="font-size:11px;color:#d68910;margin-top:6px;font-style:italic">📌 Pendiente: ${c.reunion.proximo}</div>
+      <button class="btn btn-sm btn-secondary" onclick="openModal('modal-reunion')" style="margin-top:8px">Actualizar estado</button>
+    </div>
+  `).join('');
+  
+  document.getElementById('followupOk').innerHTML = ok.map(c => `
+    <div style="background:#e8f5e9;border-left:4px solid #27ae60;padding:16px;margin-bottom:12px;border-radius:4px">
+      <div style="font-weight:600;color:#27ae60">${c.nombre} (${c.grupo})</div>
+      <div style="font-size:12px;color:#1e7e34;margin-top:4px">
+        Hace ${c.dias} días - En seguimiento
+      </div>
+      <div style="font-size:11px;color:#1e7e34;margin-top:6px;font-style:italic">✓ ${c.reunion.outcome}</div>
+    </div>
+  `).join('');
 }
 
 // ===== RENDERIZAR FONDOS =====
