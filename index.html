@@ -1291,8 +1291,15 @@ function renderReunionesConUrgencia() {
               <div style="font-size:11px;color:#666;margin-top:2px">${formatFecha(r.fecha)} (Próxima en ${diasFalta} día(s))</div>
             </div>
           </div>
+          ${r.producto ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.1)">
-            <div style="font-size:11px;font-weight:600;color:#0d47a1">🗓️ PRÓXIMA REUNIÓN AGENDADA</div>
+            <div style="font-size:11px;text-transform:uppercase;font-weight:600;color:#0d47a1">Producto</div>
+            <div style="font-size:13px;font-weight:500;margin-top:2px">${r.producto}</div>
+          </div>
+          ` : ''}
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn btn-sm btn-secondary" onclick="abrirModalReunion()">Actualizar</button>
+            <button class="btn btn-sm btn-danger" onclick="eliminarReunion('${r.id}')">Eliminar</button>
           </div>
         </div>
       `;
@@ -1301,6 +1308,11 @@ function renderReunionesConUrgencia() {
     const container = document.getElementById('reunionesProximas');
     if (container) {
       container.innerHTML = futuraHtml;
+    }
+  } else {
+    const container = document.getElementById('reunionesProximas');
+    if (container) {
+      container.innerHTML = '<div style="color:#999;padding:20px;text-align:center">Sin reuniones próximas</div>';
     }
   }
   
@@ -1580,6 +1592,7 @@ function eliminarReunion(id) {
     }
     
     renderizar();
+    renderReunionesConUrgencia();
     showToast('✓ Reunión eliminada');
   }
 }
