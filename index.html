@@ -150,6 +150,8 @@ body{
 .btn-sm{padding:6px 13px;font-size:11px}
 .btn-icon{padding:8px;border-radius:var(--radius-sm);border:1.5px solid var(--gris6);background:var(--blanco);cursor:pointer;color:var(--gris2);display:inline-flex;align-items:center;justify-content:center}
 .btn-icon:hover{border-color:var(--dorado);color:var(--dorado)}
+.btn-danger{background:var(--alarma);color:#fff;border-color:var(--alarma)}
+.btn-danger:hover{background:#a02622;border-color:#a02622}
 
 /* ===== KPI GRID ===== */
 .kpi-grid{
@@ -408,7 +410,7 @@ textarea{min-height:100px;resize:vertical}
     <div class="page" id="page-reuniones">
       <div class="section-hd">
         <h2 class="section-title">📋 Historial de Reuniones & Seguimiento</h2>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalReunion()">+ Agendar Reunión</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalReunion()">+ Registrar Reunión</button>
       </div>
 
       <div style="margin-bottom:20px">
@@ -599,10 +601,10 @@ textarea{min-height:100px;resize:vertical}
   </div>
 </div>
 
-<!-- Modal: Agendar Reunión -->
+<!-- Modal: Registrar Reunión -->
 <div class="modal-overlay" id="modal-reunion">
   <div class="modal">
-    <div class="modal-header">Agendar Reunión</div>
+    <div class="modal-header">Registrar Reunión</div>
     <form onsubmit="guardarReunion(event)">
       <div class="form-group">
         <label>Contacto</label>
@@ -636,7 +638,7 @@ textarea{min-height:100px;resize:vertical}
       </div>
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal('modal-reunion')">Cancelar</button>
-        <button type="submit" class="btn btn-gold">Agendar</button>
+        <button type="submit" class="btn btn-gold">Registrar</button>
       </div>
     </form>
   </div>
@@ -965,7 +967,7 @@ function guardarReunion(e) {
   renderizar();
   closeModal('modal-reunion');
   document.getElementById('modal-reunion').querySelector('form').reset();
-  showToast('✓ Reunión agendada');
+  showToast('✓ Reunión registrada');
 }
 
 function guardarInversion(e) {
@@ -1163,7 +1165,7 @@ function renderFollowUp() {
         ${c.reunion ? ' - ' + c.reunion.outcome : ''}
       </div>
       ${c.reunion ? `<div style="font-size:11px;color:#a02622;margin-top:6px;font-style:italic">Acción: ${c.reunion.proximo}</div>` : ''}
-      <button class="btn btn-sm btn-secondary" onclick="openModal('modal-reunion')" style="margin-top:8px">Agendar reunión</button>
+      <button class="btn btn-sm btn-secondary" onclick="openModal('modal-reunion')" style="margin-top:8px">Registrar reunión</button>
     </div>
   `).join('');
   
