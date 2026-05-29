@@ -541,6 +541,20 @@ textarea{min-height:100px;resize:vertical}
         <button class="btn btn-gold" onclick="saveConfig()">Guardar Configuración</button>
         <button class="btn btn-secondary" onclick="testConnection()">Probar Conexión</button>
       </div>
+
+      <!-- GESTIÓN DE PRODUCTOS -->
+      <div style="margin-top:24px">
+        <div class="section-hd">
+          <h2 class="section-title">📦 Productos Disponibles</h2>
+        </div>
+        <div class="table-wrap" style="padding:24px">
+          <div id="listaProductos"></div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <input type="text" id="nuevoProducto" placeholder="Nombre del nuevo producto..." style="flex:1">
+            <button class="btn btn-gold btn-sm" onclick="agregarProducto()">+ Agregar</button>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 </div>
@@ -607,8 +621,8 @@ textarea{min-height:100px;resize:vertical}
     <div class="modal-header">Registrar Reunión</div>
     <form onsubmit="guardarReunion(event)">
       <div class="form-group">
-        <label>Contacto</label>
-        <input type="text" id="r-contacto-search" placeholder="Busca por nombre..." 
+        <label>Contacto *</label>
+        <input type="text" id="r-contacto-search" placeholder="Escribe el nombre del contacto..." 
                onkeyup="buscarContactoReunion(this.value)" autocomplete="off">
         <div id="r-contacto-lista" style="
           border: 1px solid #ddd;
@@ -617,24 +631,29 @@ textarea{min-height:100px;resize:vertical}
           overflow-y: auto;
           display: none;
           background: white;
+          border-radius: 0 0 6px 6px;
         "></div>
-        <input type="hidden" id="r-contacto" required>
+        <input type="hidden" id="r-contacto">
+        <small id="r-contacto-error" style="color:#c0392b;display:none;margin-top:4px">⚠️ Selecciona un contacto de la lista</small>
       </div>
       <div class="form-group">
-        <label>Fecha y Hora</label>
+        <label>Fecha y Hora *</label>
         <input type="datetime-local" id="r-fecha" required>
       </div>
       <div class="form-group">
-        <label>Producto</label>
-        <input type="text" id="r-producto" placeholder="Ej: Portfolio One">
+        <label>Producto *</label>
+        <select id="r-producto" required>
+          <option value="">-- Seleccionar producto --</option>
+        </select>
+        <small style="color:#999;margin-top:4px;display:block">¿No está el producto? Agrégalo en <a href="#" onclick="event.preventDefault();document.querySelectorAll('.nav-item')[4].click()">Configuración</a></small>
       </div>
       <div class="form-group">
-        <label>Descripción</label>
-        <textarea id="r-descripcion"></textarea>
+        <label>Outcome</label>
+        <textarea id="r-descripcion" placeholder="¿Qué pasó en la reunión? Ej: Interesado, necesita propuesta..."></textarea>
       </div>
       <div class="form-group">
         <label>Próximo Paso</label>
-        <input type="text" id="r-proximo" placeholder="Ej: Enviar propuesta">
+        <input type="text" id="r-proximo" placeholder="Ej: Enviar propuesta, Llamar en 2 semanas...">
       </div>
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal('modal-reunion')">Cancelar</button>
@@ -688,7 +707,13 @@ const config = {
 let data = {
   contactos: [],
   reuniones: [],
-  inversiones: []
+  inversiones: [],
+  productos: [
+    'Albion Portfolio One',
+    'DVBOF',
+    'Institutional Strategy',
+    'Global Equity Fund'
+  ]
 };
 
 let filtroActual = 'Todos';
@@ -704,6 +729,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const page = item.getAttribute('data-page');
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById('page-' + page).classList.add('active');
+      
+      // Renderizar contenido según la página
+      if (page === 'config') renderListaProductos();
+      if (page === 'reuniones') renderReunionesConUrgencia();
+      if (page === 'followup') renderFollowUp();
     });
   });
 
@@ -711,6 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarContactosDelSheet();
   document.getElementById('configSheetId').value = config.sheetId;
   document.getElementById('configScriptUrl').value = config.scriptUrl;
+  renderListaProductos();
   
   setInterval(syncWithSheets, config.syncInterval);
 });
@@ -940,6 +971,16 @@ function guardarContacto(e) {
 function guardarReunion(e) {
   e.preventDefault();
   const contactoId = document.getElementById('r-contacto').value;
+  
+  // Validar que se seleccionó un contacto
+  if (!contactoId) {
+    document.getElementById('r-contacto-error').style.display = 'block';
+    document.getElementById('r-contacto-search').style.borderColor = '#c0392b';
+    return;
+  }
+  document.getElementById('r-contacto-error').style.display = 'none';
+  document.getElementById('r-contacto-search').style.borderColor = '';
+  
   const contacto = data.contactos.find(c => c.id === contactoId);
   const reunion = {
     id: Date.now().toString(),
@@ -1411,6 +1452,10 @@ function actualizarSelectores() {
   // Para inversiones mantener select normal
   const opts = data.contactos.map(c => `<option value="${c.id}">${c.nombre} (${c.grupo})</option>`).join('');
   document.getElementById('inv-contacto').innerHTML = '<option value="">-- Seleccionar --</option>' + opts;
+  
+  // Productos dropdown
+  const productosOpts = (data.productos || []).map(p => `<option value="${p}">${p}</option>`).join('');
+  document.getElementById('r-producto').innerHTML = '<option value="">-- Seleccionar producto --</option>' + productosOpts;
 }
 
 // ===== BÚSQUEDA DE CONTACTOS =====
@@ -1581,7 +1626,11 @@ function guardarEnLocalStorage() {
 function cargarDelLocalStorage() {
   const saved = localStorage.getItem('dashboardData');
   if (saved) {
-    data = JSON.parse(saved);
+    const parsed = JSON.parse(saved);
+    data.contactos = parsed.contactos || [];
+    data.reuniones = parsed.reuniones || [];
+    data.inversiones = parsed.inversiones || [];
+    data.productos = parsed.productos || ['Albion Portfolio One', 'DVBOF', 'Institutional Strategy', 'Global Equity Fund'];
     renderizar();
   }
 }
@@ -1631,11 +1680,66 @@ function testConnection() {
   cargarContactosDelSheet();
 }
 
+// ===== GESTIÓN DE PRODUCTOS =====
+function agregarProducto() {
+  const input = document.getElementById('nuevoProducto');
+  const nombre = input.value.trim();
+  
+  if (!nombre) {
+    showToast('⚠️ Escribe el nombre del producto');
+    return;
+  }
+  
+  if (!data.productos) data.productos = [];
+  
+  if (data.productos.includes(nombre)) {
+    showToast('⚠️ Ese producto ya existe');
+    return;
+  }
+  
+  data.productos.push(nombre);
+  guardarEnLocalStorage();
+  input.value = '';
+  renderListaProductos();
+  actualizarSelectores();
+  showToast('✓ Producto agregado');
+}
+
+function eliminarProducto(nombre) {
+  if (confirm('¿Eliminar el producto "' + nombre + '"?')) {
+    data.productos = data.productos.filter(p => p !== nombre);
+    guardarEnLocalStorage();
+    renderListaProductos();
+    actualizarSelectores();
+    showToast('✓ Producto eliminado');
+  }
+}
+
+function renderListaProductos() {
+  const container = document.getElementById('listaProductos');
+  if (!container) return;
+  
+  if (!data.productos || data.productos.length === 0) {
+    container.innerHTML = '<div style="color:#999;padding:10px;text-align:center">Sin productos. Agrega uno abajo.</div>';
+    return;
+  }
+  
+  container.innerHTML = data.productos.map(p => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee">
+      <span style="font-weight:500">${p}</span>
+      <button class="btn btn-sm btn-danger" onclick="eliminarProducto('${p}')">Eliminar</button>
+    </div>
+  `).join('');
+}
+
 function abrirModalReunion() {
   document.getElementById('r-contacto-search').value = '';
   document.getElementById('r-contacto').value = '';
   document.getElementById('r-contacto-lista').innerHTML = '';
   document.getElementById('r-contacto-lista').style.display = 'none';
+  document.getElementById('r-contacto-error').style.display = 'none';
+  document.getElementById('r-contacto-search').style.borderColor = '';
+  actualizarSelectores();
   openModal('modal-reunion');
 }
 
