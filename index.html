@@ -1525,23 +1525,16 @@ function formatFecha(fecha) {
 function eliminarContacto(id) {
   if (confirm('¿Estás seguro de que deseas eliminar este contacto?')) {
     console.log('Eliminando contacto con ID:', id);
-    console.log('Contactos antes:', data.contactos.length);
     
     const contactoAEliminar = data.contactos.find(c => c.id === id);
-    if (!contactoAEliminar) {
-      console.error('Contacto no encontrado:', id);
-      showToast('❌ Error: Contacto no encontrado');
-      return;
-    }
     
-    // Eliminar del array
+    // Eliminar del array (si existe)
     data.contactos = data.contactos.filter(c => c.id !== id);
-    console.log('Contactos después:', data.contactos.length);
     
     // Guardar en localStorage
     guardarEnLocalStorage();
     
-    // Sincronizar eliminación con Sheet si hay Apps Script
+    // Sincronizar eliminación con Sheet SIEMPRE
     if (config.scriptUrl) {
       fetch(config.scriptUrl, {
         method: 'POST',
@@ -1551,7 +1544,7 @@ function eliminarContacto(id) {
           type: 'eliminar', 
           entity: 'contacto', 
           id: id,
-          contacto: contactoAEliminar 
+          contacto: contactoAEliminar || { id: id }
         })
       }).catch(err => console.log('Se eliminó localmente'));
     }
@@ -1567,16 +1560,12 @@ function eliminarReunion(id) {
     console.log('Eliminando reunión con ID:', id);
     
     const reunionAEliminar = data.reuniones.find(r => r.id === id);
-    if (!reunionAEliminar) {
-      console.error('Reunión no encontrada:', id);
-      showToast('❌ Error: Reunión no encontrada');
-      return;
-    }
     
+    // Eliminar del array local (si existe)
     data.reuniones = data.reuniones.filter(r => r.id !== id);
     guardarEnLocalStorage();
     
-    // Sincronizar eliminación
+    // Sincronizar eliminación con el Sheet SIEMPRE (aunque no esté local)
     if (config.scriptUrl) {
       fetch(config.scriptUrl, {
         method: 'POST',
@@ -1586,7 +1575,7 @@ function eliminarReunion(id) {
           type: 'eliminar', 
           entity: 'reunion', 
           id: id,
-          reunion: reunionAEliminar 
+          reunion: reunionAEliminar || { id: id }
         })
       }).catch(err => console.log('Se eliminó localmente'));
     }
