@@ -796,17 +796,17 @@ async function cargarContactosDelSheet() {
           console.log('Contactos locales:', data.contactos.length);
           
           // Contactos: mantener los locales (sin ID del Sheet) y agregar los del Sheet
-          const contactosLocales = data.contactos.filter(c => c.id.length > 13); // IDs locales son timestamps largos
+          const contactosLocales = data.contactos.filter(c => c.id.length >= 10); // IDs locales son timestamps largos
           const contactosDelSheet = contactosSheet.filter(c => !contactosLocales.some(local => local.email === c.email));
           data.contactos = [...contactosLocales, ...contactosDelSheet];
           
           // Reuniones: igual
-          const reunionesLocales = data.reuniones.filter(r => r.id.length > 13);
+          const reunionesLocales = data.reuniones.filter(r => r.id.length >= 10);
           const reunionesDelSheet = reunionesSheet.filter(r => !reunionesLocales.some(local => local.contacto === r.contacto && local.fecha === r.fecha));
           data.reuniones = [...reunionesLocales, ...reunionesDelSheet];
           
           // Inversiones: igual
-          const inversionesLocales = data.inversiones.filter(i => i.id.length > 13);
+          const inversionesLocales = data.inversiones.filter(i => i.id.length >= 10);
           const inversionesDelSheet = inversionesSheet.filter(i => !inversionesLocales.some(local => local.contacto === i.contacto && local.fondo === i.fondo));
           data.inversiones = [...inversionesLocales, ...inversionesDelSheet];
           
