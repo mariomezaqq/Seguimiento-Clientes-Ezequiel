@@ -458,7 +458,7 @@ textarea{min-height:100px;resize:vertical}
     <div class="page" id="page-inversiones">
       <div class="section-hd">
         <h2 class="section-title">Inversiones</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-inversion')">+ Registrar</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalInversion()">+ Registrar</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -480,46 +480,10 @@ textarea{min-height:100px;resize:vertical}
     <div class="page" id="page-fondos">
       <div class="section-hd">
         <h2 class="section-title">Fondos de Inversión</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-inversion')">+ Inversión</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalInversion()">+ Inversión</button>
       </div>
       
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px">
-        <!-- FONDO 1: Albion Portfolio One -->
-        <div class="table-wrap">
-          <div style="background:#211915; color:#b09366; padding:12px; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; font-size:16px; font-weight:600;">Albion Portfolio One</h3>
-            <span style="font-size:13px; color:#87868a;" id="apo-count">0 clientes</span>
-          </div>
-          <div style="background:#f4f3f1; padding:16px;">
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #d8d9dd;">
-              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">CLIENTE</div>
-              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">EMPRESA</div>
-              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">AUM</div>
-            </div>
-            <div id="fondo-apo-list" style="min-height:100px;">
-              <div style="text-align:center; color:#87868a; padding:20px;">Sin clientes</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- FONDO 2: DVBOF -->
-        <div class="table-wrap">
-          <div style="background:#211915; color:#b09366; padding:12px; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0; font-size:16px; font-weight:600;">DVBOF</h3>
-            <span style="font-size:13px; color:#87868a;" id="dvb-count">0 clientes</span>
-          </div>
-          <div style="background:#f4f3f1; padding:16px;">
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #d8d9dd;">
-              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">CLIENTE</div>
-              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">EMPRESA</div>
-              <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">AUM</div>
-            </div>
-            <div id="fondo-dvb-list" style="min-height:100px;">
-              <div style="text-align:center; color:#87868a; padding:20px;">Sin clientes</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div id="fondosContainer" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px"></div>
     </div>
 
     <!-- PAGE: CONFIGURACIÓN -->
@@ -621,8 +585,9 @@ textarea{min-height:100px;resize:vertical}
     <div class="modal-header">Registrar Reunión</div>
     <form onsubmit="guardarReunion(event)">
       <div class="form-group">
-        <label>Contacto *</label>
-        <input type="text" id="r-contacto-search" placeholder="Escribe el nombre del contacto..." 
+        <label>Personas en la reunión * (puedes agregar varias)</label>
+        <div id="r-contactos-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <input type="text" id="r-contacto-search" placeholder="Escribe un nombre y selecciónalo..." 
                onkeyup="buscarContactoReunion(this.value)" autocomplete="off">
         <div id="r-contacto-lista" style="
           border: 1px solid #ddd;
@@ -633,8 +598,7 @@ textarea{min-height:100px;resize:vertical}
           background: white;
           border-radius: 0 0 6px 6px;
         "></div>
-        <input type="hidden" id="r-contacto">
-        <small id="r-contacto-error" style="color:#c0392b;display:none;margin-top:4px">⚠️ Selecciona un contacto de la lista</small>
+        <small id="r-contacto-error" style="color:#c0392b;display:none;margin-top:4px">⚠️ Agrega al menos una persona</small>
       </div>
       <div class="form-group">
         <label>Fecha y Hora *</label>
@@ -666,23 +630,32 @@ textarea{min-height:100px;resize:vertical}
 <!-- Modal: Registrar Inversión -->
 <div class="modal-overlay" id="modal-inversion">
   <div class="modal">
-    <div class="modal-header">Registrar Inversión</div>
+    <div class="modal-header">Registrar Inversión en Fondo</div>
     <form onsubmit="guardarInversion(event)">
       <div class="form-group">
-        <label>Contacto</label>
-        <select id="inv-contacto" required></select>
+        <label>Empresa *</label>
+        <input type="text" id="inv-empresa" placeholder="Ej: LarrainVial, Abaqus..." list="lista-empresas" required>
+        <datalist id="lista-empresas"></datalist>
+        <small style="color:#999;margin-top:4px;display:block">Escribe o selecciona la empresa que invierte</small>
       </div>
       <div class="form-group">
-        <label>Fondo</label>
+        <label>Contacto (opcional)</label>
+        <input type="text" id="inv-contacto-texto" placeholder="Persona de contacto en la empresa">
+      </div>
+      <div class="form-group">
+        <label>Fondo *</label>
         <select id="inv-fondo" required>
           <option value="">-- Seleccionar fondo --</option>
-          <option value="Albion Portfolio One">Albion Portfolio One</option>
-          <option value="DVBOF">DVBOF</option>
         </select>
       </div>
       <div class="form-group">
-        <label>Monto (USD)</label>
+        <label>Monto (USD) *</label>
         <input type="number" id="inv-monto" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label>Fecha de cierre *</label>
+        <input type="month" id="inv-fecha" required>
+        <small style="color:#999;margin-top:4px;display:block">Ej: el cierre de mayo 2026</small>
       </div>
       <div class="form-group">
         <label>Notas</label>
@@ -970,10 +943,9 @@ function guardarContacto(e) {
 
 function guardarReunion(e) {
   e.preventDefault();
-  const contactoId = document.getElementById('r-contacto').value;
   
-  // Validar que se seleccionó un contacto
-  if (!contactoId) {
+  // Validar que se agregó al menos una persona
+  if (contactosReunion.length === 0) {
     document.getElementById('r-contacto-error').style.display = 'block';
     document.getElementById('r-contacto-search').style.borderColor = '#c0392b';
     return;
@@ -981,12 +953,16 @@ function guardarReunion(e) {
   document.getElementById('r-contacto-error').style.display = 'none';
   document.getElementById('r-contacto-search').style.borderColor = '';
   
-  const contacto = data.contactos.find(c => c.id === contactoId);
+  // Nombres de todas las personas (separados por coma)
+  const nombresContactos = contactosReunion.map(c => c.nombre).join(', ');
+  // Empresa (de la primera persona, normalmente son de la misma)
+  const empresa = contactosReunion[0].grupo;
+  
   const reunion = {
     id: Date.now().toString(),
     fecha: document.getElementById('r-fecha').value,
-    contacto: contacto ? contacto.nombre : '',
-    empresa: contacto ? contacto.grupo : '',
+    contacto: nombresContactos,
+    empresa: empresa,
     producto: document.getElementById('r-producto').value,
     descripcion: document.getElementById('r-descripcion').value,
     proximo: document.getElementById('r-proximo').value
@@ -1006,21 +982,24 @@ function guardarReunion(e) {
   }
   
   renderizar();
+  renderReunionesConUrgencia();
   closeModal('modal-reunion');
   document.getElementById('modal-reunion').querySelector('form').reset();
+  contactosReunion = [];
+  document.getElementById('r-contactos-chips').innerHTML = '';
   showToast('✓ Reunión registrada');
 }
 
 function guardarInversion(e) {
   e.preventDefault();
-  const contactoId = document.getElementById('inv-contacto').value;
-  const contacto = data.contactos.find(c => c.id === contactoId);
   const inversion = {
     id: Date.now().toString(),
-    contacto: contacto ? contacto.nombre : '',
-    empresa: contacto ? contacto.grupo : '',
+    contacto: document.getElementById('inv-contacto-texto').value || '',
+    empresa: document.getElementById('inv-empresa').value,
     fondo: document.getElementById('inv-fondo').value,
-    monto: document.getElementById('inv-monto').value
+    monto: document.getElementById('inv-monto').value,
+    fecha: document.getElementById('inv-fecha').value,
+    notas: document.getElementById('inv-notas').value
   };
   
   data.inversiones.push(inversion);
@@ -1431,43 +1410,88 @@ function filtrarReuniones(valor) {
 }
 
 // ===== RENDERIZAR FONDOS =====
+function formatMes(fechaMes) {
+  if (!fechaMes) return '-';
+  const [anio, mes] = fechaMes.split('-');
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return meses[parseInt(mes) - 1] + ' ' + anio;
+}
+
 function renderizarFondos() {
-  const inv_apo = data.inversiones.filter(inv => inv.fondo === 'Albion Portfolio One');
-  const inv_dvb = data.inversiones.filter(inv => inv.fondo === 'DVBOF');
+  const container = document.getElementById('fondosContainer');
+  if (!container) return;
   
-  // Albion Portfolio One
-  document.getElementById('apo-count').textContent = inv_apo.length + ' cliente' + (inv_apo.length !== 1 ? 's' : '');
-  document.getElementById('fondo-apo-list').innerHTML = inv_apo.length === 0 
-    ? '<div style="text-align:center; color:#87868a; padding:20px;">Sin clientes</div>'
-    : inv_apo.map(inv => `
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:8px; padding:8px 0; border-bottom:1px solid #d8d9dd;">
-        <div style="font-size:12px; color:#211915;">${inv.contacto}</div>
-        <div style="font-size:12px; color:#87868a;">${inv.empresa}</div>
-        <div style="font-size:12px; font-weight:600; color:#b09366;">$${parseFloat(inv.monto).toLocaleString()}</div>
-      </div>
-    `).join('');
+  // Lista de fondos = productos + cualquier fondo que aparezca en inversiones
+  const fondosDeInversiones = [...new Set(data.inversiones.map(i => i.fondo).filter(f => f))];
+  const todosFondos = [...new Set([...(data.productos || []), ...fondosDeInversiones])];
   
-  // DVBOF
-  document.getElementById('dvb-count').textContent = inv_dvb.length + ' cliente' + (inv_dvb.length !== 1 ? 's' : '');
-  document.getElementById('fondo-dvb-list').innerHTML = inv_dvb.length === 0
-    ? '<div style="text-align:center; color:#87868a; padding:20px;">Sin clientes</div>'
-    : inv_dvb.map(inv => `
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:8px; padding:8px 0; border-bottom:1px solid #d8d9dd;">
-        <div style="font-size:12px; color:#211915;">${inv.contacto}</div>
-        <div style="font-size:12px; color:#87868a;">${inv.empresa}</div>
-        <div style="font-size:12px; font-weight:600; color:#b09366;">$${parseFloat(inv.monto).toLocaleString()}</div>
+  if (todosFondos.length === 0) {
+    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#999;padding:40px">Sin fondos. Agrega productos en Configuración.</div>';
+    return;
+  }
+  
+  container.innerHTML = todosFondos.map(fondo => {
+    const invs = data.inversiones.filter(inv => inv.fondo === fondo);
+    const totalAUM = invs.reduce((sum, inv) => sum + (parseFloat(inv.monto) || 0), 0);
+    
+    const filas = invs.length === 0
+      ? '<div style="text-align:center; color:#87868a; padding:20px;">Sin inversiones</div>'
+      : invs.map(inv => `
+          <div style="display:grid; grid-template-columns:2fr 1.2fr 1fr; gap:12px; margin-bottom:8px; padding:8px 0; border-bottom:1px solid #d8d9dd; align-items:center;">
+            <div>
+              <div style="font-size:13px; color:#211915; font-weight:600;">${inv.empresa || 'Sin empresa'}</div>
+              ${inv.contacto ? `<div style="font-size:11px; color:#87868a;">${inv.contacto}</div>` : ''}
+            </div>
+            <div style="font-size:11px; color:#87868a;">${formatMes(inv.fecha)}</div>
+            <div style="font-size:13px; font-weight:600; color:#b09366; text-align:right;">
+              $${parseFloat(inv.monto || 0).toLocaleString()}
+              <div style="margin-top:4px"><button class="btn btn-sm btn-danger" onclick="eliminarInversion('${inv.id}')" style="font-size:9px;padding:3px 7px">Eliminar</button></div>
+            </div>
+          </div>
+        `).join('');
+    
+    return `
+      <div class="table-wrap">
+        <div style="background:#211915; color:#b09366; padding:12px; border-radius:8px 8px 0 0;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:16px; font-weight:600;">${fondo}</h3>
+            <span style="font-size:13px; color:#87868a;">${invs.length} inversión${invs.length !== 1 ? 'es' : ''}</span>
+          </div>
+          <div style="font-size:18px; font-weight:700; color:#fff; margin-top:6px;">AUM Total: $${totalAUM.toLocaleString()}</div>
+        </div>
+        <div style="background:#f4f3f1; padding:16px;">
+          <div style="display:grid; grid-template-columns:2fr 1.2fr 1fr; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #d8d9dd;">
+            <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">EMPRESA</div>
+            <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600;">CIERRE</div>
+            <div style="font-size:10px; color:#87868a; text-transform:uppercase; font-weight:600; text-align:right;">MONTO</div>
+          </div>
+          ${filas}
+        </div>
       </div>
-    `).join('');
+    `;
+  }).join('');
 }
 
 function actualizarSelectores() {
-  // Para inversiones mantener select normal
-  const opts = data.contactos.map(c => `<option value="${c.id}">${c.nombre} (${c.grupo})</option>`).join('');
-  document.getElementById('inv-contacto').innerHTML = '<option value="">-- Seleccionar --</option>' + opts;
+  // Empresas únicas (datalist para inversiones)
+  const empresasUnicas = [...new Set(data.contactos.map(c => c.grupo).filter(g => g))].sort();
+  const datalistEmpresas = document.getElementById('lista-empresas');
+  if (datalistEmpresas) {
+    datalistEmpresas.innerHTML = empresasUnicas.map(e => `<option value="${e}">`).join('');
+  }
   
-  // Productos dropdown
+  // Productos dropdown (reuniones)
   const productosOpts = (data.productos || []).map(p => `<option value="${p}">${p}</option>`).join('');
-  document.getElementById('r-producto').innerHTML = '<option value="">-- Seleccionar producto --</option>' + productosOpts;
+  const rProducto = document.getElementById('r-producto');
+  if (rProducto) {
+    rProducto.innerHTML = '<option value="">-- Seleccionar producto --</option>' + productosOpts;
+  }
+  
+  // Fondos dropdown (inversiones) - usa los mismos productos
+  const invFondo = document.getElementById('inv-fondo');
+  if (invFondo) {
+    invFondo.innerHTML = '<option value="">-- Seleccionar fondo --</option>' + productosOpts;
+  }
 }
 
 // ===== BÚSQUEDA DE CONTACTOS =====
@@ -1588,14 +1612,7 @@ function eliminarReunion(id) {
 
 function eliminarInversion(id) {
   if (confirm('¿Eliminar esta inversión?')) {
-    console.log('Eliminando inversión con ID:', id);
-    
     const inversionAEliminar = data.inversiones.find(i => i.id === id);
-    if (!inversionAEliminar) {
-      console.error('Inversión no encontrada:', id);
-      showToast('❌ Error: Inversión no encontrada');
-      return;
-    }
     
     data.inversiones = data.inversiones.filter(i => i.id !== id);
     guardarEnLocalStorage();
@@ -1610,7 +1627,7 @@ function eliminarInversion(id) {
           type: 'eliminar', 
           entity: 'inversion', 
           id: id,
-          inversion: inversionAEliminar 
+          inversion: inversionAEliminar || { id: id }
         })
       }).catch(err => console.log('Se eliminó localmente'));
     }
@@ -1734,9 +1751,18 @@ function renderListaProductos() {
   `).join('');
 }
 
+let contactosReunion = []; // Lista de personas seleccionadas para la reunión
+
+function abrirModalInversion() {
+  actualizarSelectores();
+  document.getElementById('modal-inversion').querySelector('form').reset();
+  openModal('modal-inversion');
+}
+
 function abrirModalReunion() {
+  contactosReunion = [];
   document.getElementById('r-contacto-search').value = '';
-  document.getElementById('r-contacto').value = '';
+  document.getElementById('r-contactos-chips').innerHTML = '';
   document.getElementById('r-contacto-lista').innerHTML = '';
   document.getElementById('r-contacto-lista').style.display = 'none';
   document.getElementById('r-contacto-error').style.display = 'none';
@@ -1755,8 +1781,9 @@ function buscarContactoReunion(valor) {
   }
   
   const filtrados = data.contactos.filter(c => 
-    c.nombre.toLowerCase().includes(valor.toLowerCase()) ||
-    c.grupo.toLowerCase().includes(valor.toLowerCase())
+    (c.nombre.toLowerCase().includes(valor.toLowerCase()) ||
+    c.grupo.toLowerCase().includes(valor.toLowerCase())) &&
+    !contactosReunion.some(sel => sel.id === c.id) // No mostrar los ya agregados
   );
   
   if (filtrados.length === 0) {
@@ -1766,8 +1793,8 @@ function buscarContactoReunion(valor) {
   }
   
   lista.innerHTML = filtrados.map(c => `
-    <div onclick="seleccionarContactoReunion('${c.id}', '${c.nombre}')" 
-         style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; hover: background: #f5f5f5;">
+    <div onclick="agregarContactoReunion('${c.id}')" 
+         style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;">
       <strong>${c.nombre}</strong> - ${c.grupo} (${c.tipo})
     </div>
   `).join('');
@@ -1775,10 +1802,40 @@ function buscarContactoReunion(valor) {
   lista.style.display = 'block';
 }
 
-function seleccionarContactoReunion(id, nombre) {
-  document.getElementById('r-contacto-search').value = nombre;
-  document.getElementById('r-contacto').value = id;
+function agregarContactoReunion(id) {
+  const contacto = data.contactos.find(c => c.id === id);
+  if (!contacto) return;
+  
+  // Evitar duplicados
+  if (contactosReunion.some(c => c.id === id)) return;
+  
+  contactosReunion.push({ id: contacto.id, nombre: contacto.nombre, grupo: contacto.grupo });
+  
+  // Limpiar buscador
+  document.getElementById('r-contacto-search').value = '';
   document.getElementById('r-contacto-lista').style.display = 'none';
+  document.getElementById('r-contacto-error').style.display = 'none';
+  
+  renderChipsContactos();
+}
+
+function quitarContactoReunion(id) {
+  contactosReunion = contactosReunion.filter(c => c.id !== id);
+  renderChipsContactos();
+}
+
+function renderChipsContactos() {
+  const container = document.getElementById('r-contactos-chips');
+  container.innerHTML = contactosReunion.map(c => `
+    <span style="
+      display:inline-flex;align-items:center;gap:6px;
+      background:var(--dorado);color:var(--negro);
+      padding:5px 10px;border-radius:16px;font-size:12px;font-weight:600
+    ">
+      ${c.nombre}
+      <span onclick="quitarContactoReunion('${c.id}')" style="cursor:pointer;font-weight:700;font-size:14px">×</span>
+    </span>
+  `).join('');
 }
 
 
